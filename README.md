@@ -96,6 +96,33 @@ Open the returned JSON through **Drop files or browse** in the workbench, then i
 
 Run `npm run test:mcp` to verify the MCP protocol, room persistence, and workbench manifest compatibility.
 
+#### Troubleshoot room tool errors on Windows
+
+If OpenCode reports `undefined is not an object (evaluating 'value.replace')`, first isolate the MCP server from the OpenCode model/plugin path. From the checkout in PowerShell:
+
+```powershell
+npm install
+npm run doctor:mcp
+opencode --version
+opencode mcp list
+```
+
+The doctor uses the official MCP SDK to initialize the server, discover tools, list rooms, create a 12.192 × 12.192 × 3.048 m test room, read it, and check validation errors. It uses a temporary directory that is removed afterward; it does not modify your saved rooms. A passing doctor verifies the local server/client protocol, not OpenCode's model or plugin execution. The separate Forma backend can be disconnected without blocking Astra room tools.
+
+If the doctor passes but OpenCode still fails, close OpenCode and start a new process with diagnostic tracing:
+
+```powershell
+$env:ASTRA_MCP_DEBUG = '1'
+opencode --log-level DEBUG --print-logs
+# Reproduce the failed room call, then exit OpenCode.
+Get-Content .astra\mcp-debug.jsonl -Tail 20
+Remove-Item Env:ASTRA_MCP_DEBUG
+```
+
+Astra writes `tool-call-received`, then `tool-call-succeeded` or `tool-call-failed` to stderr and `.astra/mcp-debug.jsonl` (under `ASTRA_ROOT` if configured). These events include only the known tool name, never arguments, scene content, or credentials; stdout remains reserved for MCP messages. The local file also works with clients that discard child stderr. A received/succeeded pair means Astra completed the call; an error without a received event suggests the call failed before reaching Astra (provided tracing is enabled on that connection and the trace is writable). Share the doctor output, OpenCode version, Astra events, and the error stack when reporting the issue. Review OpenCode's own logs for sensitive information before sharing them. The trace is appended only while debug mode is enabled and may be deleted after troubleshooting.
+
+Use the advertised names such as `astra.create_room` with a direct MCP client. OpenCode exposes it to its model as `astra_astra_create_room`; the client maps that name back to the server tool name. If the checkout was updated while OpenCode was running, restart OpenCode to reload tools.
+
 If the MCP server is unavailable, use the deterministic Forma demo or import an existing Forma JSON/STEP project as usual.
 
 ### Build a space for the demo
