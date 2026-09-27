@@ -77,7 +77,24 @@ opencode
 
 Use the `/forma-demo` command in OpenCode. It compiles a validated project to `demo/forma-project.json`; import that file into Astra with **Import project**. The generated `demo/` directory is ignored by Git. Restart OpenCode after changing `opencode.json` because project configuration is loaded at startup.
 
-OpenCode now connects to both local servers: Forma provides equipment authoring and validation, while Astra exposes animation feedback, compiled-artifact handoff, and space-brief tools. Verify both with `opencode mcp list` before starting the demo.
+OpenCode now connects to both local servers: Forma provides equipment authoring and validation, while Astra exposes room creation, animation feedback, compiled-artifact handoff, and space-brief tools. Verify both with `opencode mcp list` before starting the demo.
+
+### Create rooms through MCP
+
+Ask your connected agent: **“Create a room called Maker lab, 9 meters wide, 7 meters deep, and 3.2 meters high.”** The agent can call:
+
+```json
+{"name":"astra.create_room","arguments":{"name":"Maker lab","width":9,"depth":7,"height":3.2}}
+```
+
+This creates an empty, portable `astra.scene` v1 document under `.astra/rooms/<id>.json` and returns its ID, path, and document. Each dimension must be 1–100 meters; the room vector uses **width, depth, height**. Each call creates a new room, even when names match, without overwriting an existing room.
+
+- `astra.list_rooms` lists rooms created by this MCP checkout.
+- `astra.read_room` takes an `id` and returns the saved scene document.
+
+Open the returned JSON through **Drop files or browse** in the workbench, then import equipment and arrange the room. Creating a room does not replace the active browser workspace. These are local files; to save across devices, sign in and save from the workbench, or use `astra rooms import <path> --name "Maker lab"` after CLI login. The MCP server runs with the local user's filesystem access and does not expose a remote, shared-user endpoint. `astra.write_space_brief` remains available for the preset layout planner.
+
+Run `npm run test:mcp` to verify the MCP protocol, room persistence, and workbench manifest compatibility.
 
 If the MCP server is unavailable, use the deterministic Forma demo or import an existing Forma JSON/STEP project as usual.
 

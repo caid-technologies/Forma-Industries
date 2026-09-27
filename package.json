@@ -17,6 +17,7 @@
     "test:scene": "tsx scripts/scene-manifest-test.ts",
     "test:draft-recovery": "node scripts/draft-recovery-smoke.mjs",
     "test:room-drafts": "node scripts/room-draft-smoke.mjs",
+    "test:mcp": "node --import tsx scripts/mcp-rooms-test.ts",
     "test:scene-crud": "tsx scripts/scene-crud-smoke.ts",
     "test:gif": "node scripts/gif-smoke.mjs",
     "test:auth": "node scripts/auth-smoke.mjs",
