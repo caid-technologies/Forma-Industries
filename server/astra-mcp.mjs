@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
+import { callRoomTool, roomTools } from './mcp-rooms.mjs';
 
 const root = resolve(process.env.ASTRA_ROOT || process.cwd());
 const json = path => JSON.parse(readFileSync(path, 'utf8'));
@@ -17,6 +18,7 @@ const scrub = value => Array.isArray(value) ? value.map(scrub) : value && typeof
 const textResult = value => ({ content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value });
 
 const tools = [
+  ...roomTools,
   { name: 'astra.read_animation_feedback', description: 'Read the latest scrubbed Astra authored-animation review for Forma iteration.', inputSchema: { type: 'object', properties: {} } },
   { name: 'astra.read_forma_project', description: 'Read a local compiled Forma project manifest from the Astra checkout.', inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'Checkout-relative path, usually demo/forma-project.json.' } } } },
   { name: 'astra.save_forma_project', description: 'Save a Forma MCP project_ir back into an existing compiled project manifest.', inputSchema: { type: 'object', properties: { path: { type: 'string' }, project_ir: { type: 'object' } }, required: ['path', 'project_ir'] } },
@@ -25,6 +27,7 @@ const tools = [
 ];
 
 function callTool(name, args = {}) {
+  if (roomTools.some(tool => tool.name === name)) return callRoomTool(root, name, args);
   if (name === 'astra.read_animation_feedback') {
     const path = localPath('.astra/feedback/latest.json');
     if (!existsSync(path)) throw new Error('No Astra animation feedback exists yet. Render an authored timeline animation and send feedback from GIF studio.');
