@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { applyWorldPoses, createWorld } from '../lib/world';
 import { evaluateWorkspace, type Workspace } from '../lib/workspace';
 import { regionBounds, type FloorRegion } from '../lib/gif';
+import { updateCameraDepth } from '../lib/camera-depth';
 
 type Props = { workspace: Workspace; selected: number; selectedPart: number; time: number | null; focus: number;
   region: FloorRegion | null; onSelect: (instance: number, part: number) => void };
@@ -17,7 +18,7 @@ export function WorkspaceViewer(props: Props) {
     const world = createWorld(p.workspace.items.map(item => item.asset), p.workspace.room);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); el.appendChild(renderer.domElement);
-    const camera = new THREE.PerspectiveCamera(45, 1, .0001, 10000);
+    const camera = new THREE.PerspectiveCamera(45, 1, .01, 100);
     const controls = new OrbitControls(camera, renderer.domElement); controls.enableDamping = true;
     const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2(); let down = [0,0];
     const onDown = (event: PointerEvent) => { down = [event.clientX, event.clientY]; };
@@ -57,7 +58,9 @@ export function WorkspaceViewer(props: Props) {
         if (outline) { world.scene.remove(outline); outline.geometry.dispose(); (outline.material as THREE.Material).dispose(); outline=null; }
         if (region) try { outline = new THREE.Box3Helper(regionBounds(region,workspace.room),0xc8ef82); world.scene.add(outline); } catch { /* Invalid region is explained in the export panel. */ }
       }
-      controls.update(); renderer.render(world.scene,camera);
+      controls.update();
+      updateCameraDepth(camera, world.scene, controls.target);
+      renderer.render(world.scene,camera);
     });
     return () => { observer.disconnect(); renderer.setAnimationLoop(null); renderer.domElement.removeEventListener('pointerdown',onDown); renderer.domElement.removeEventListener('pointerup',onUp); controls.dispose(); world.dispose(); renderer.dispose(); el.removeChild(renderer.domElement); };
   }, [key,roomKey]);

@@ -3,6 +3,7 @@ import { GIFEncoder, applyPalette, quantize } from 'gifenc';
 import type { Asset } from './scene';
 import { applyWorldPoses, createWorld } from './world';
 import { appendAssets, emptyWorkspace, evaluateWorkspace, type Workspace } from './workspace';
+import { updateCameraDepth } from './camera-depth';
 
 export type FloorRegion = { x: number; z: number; width: number; depth: number };
 export type GifOptions = {
@@ -60,7 +61,7 @@ export async function renderGif(assets: Asset[], room: number[], options: GifOpt
     if(!included.size) throw new Error('This export contains no visible assets. Adjust its scope or floor section.');
     if(section) renderer.clippingPlanes=[new THREE.Plane(new THREE.Vector3(1,0,0),-section.min.x),new THREE.Plane(new THREE.Vector3(-1,0,0),section.max.x),new THREE.Plane(new THREE.Vector3(0,0,1),-section.min.z),new THREE.Plane(new THREE.Vector3(0,0,-1),section.max.z),new THREE.Plane(new THREE.Vector3(0,1,0),-section.min.y),new THREE.Plane(new THREE.Vector3(0,-1,0),section.max.y)];
     const center=bounds.getCenter(new THREE.Vector3());const size=bounds.getSize(new THREE.Vector3());const radius=Math.max(size.length()/2,.01);
-    const camera=new THREE.PerspectiveCamera(40,1,Math.max(radius/1000,.00001),radius*100);const distance=radius/Math.sin(THREE.MathUtils.degToRad(20))*1.15;
+    const camera=new THREE.PerspectiveCamera(40,1,.01,100);const distance=radius/Math.sin(THREE.MathUtils.degToRad(20))*1.15;
     const lift=size.y*.3;if(options.motion==='sample')center.y+=lift/2;
     const canvas=document.createElement('canvas');canvas.width=options.size;canvas.height=options.size;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('This browser cannot capture GIF frames.');
     const gif=GIFEncoder();
@@ -76,7 +77,8 @@ export async function renderGif(assets: Asset[], room: number[], options: GifOpt
       if(options.motion==='sample')world.groups[options.assetIndex].position.y=lift*(1-Math.cos(frame/frames*Math.PI*2))/2;
       world.groups.forEach((group,i)=>{group.visible=eligible(i)&&poses[i].visible&&(!section||section.intersectsBox(new THREE.Box3().setFromObject(group)));});
       const angle=Math.PI/4+(options.motion==='turntable'?frame/frames*Math.PI*2:0);
-      camera.position.set(center.x+Math.sin(angle)*distance*.82,center.y+distance*.58,center.z+Math.cos(angle)*distance*.82);camera.lookAt(center);renderer.render(world.scene,camera);
+      camera.position.set(center.x+Math.sin(angle)*distance*.82,center.y+distance*.58,center.z+Math.cos(angle)*distance*.82);camera.lookAt(center);
+      updateCameraDepth(camera,world.scene,center);renderer.render(world.scene,camera);
       metadata.frames?.push({time:start+frame*delay/1000,instances:[...included].map(i=>({id:state.items[i].id,position:poses[i].position,rotation:poses[i].rotation,parts:poses[i].parts}))});
       context.drawImage(renderer.domElement,0,0);context.fillStyle='#101716';context.fillRect(0,options.size-29,options.size,29);context.fillStyle='#dfe7df';context.font='11px sans-serif';context.fillText(`ASTRA | ${options.scope.toUpperCase()} | ${options.motion.toUpperCase()} | meters`,10,options.size-11);
       const pixels=context.getImageData(0,0,options.size,options.size).data;const palette=quantize(pixels,256);gif.writeFrame(applyPalette(pixels,palette),options.size,options.size,{palette,delay,repeat:options.motion==='animation'&&!state.animation.loop?-1:0});

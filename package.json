@@ -7,6 +7,7 @@
     "astra": "cli/astra.mjs"
   },
   "scripts": {
+    "test:camera-depth": "node --import tsx scripts/camera-depth-test.ts",
     "postinstall": "node scripts/prepare-vendor.mjs",
     "dev": "concurrently -k -n api,web \"node --env-file-if-exists=.env server/index.mjs\" \"vite --host 127.0.0.1\"",
     "build": "tsc --noEmit && vite build",
