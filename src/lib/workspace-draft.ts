@@ -9,10 +9,19 @@ function storedWorkspace(workspace:Workspace,owner:string|null,cloudScene:SavedS
     instances:workspace.items.map(({id,name,asset,position,rotation,visible})=>({id,name,assetId:asset.id,position,rotation,visible})),workspaceDocument:document,activeCloudScene:cloudScene?.owner_id===owner?cloudScene:null};
 }
 export function draftScope(owner:string|null,roomId:string){return `${owner??'guest'}:${roomId}`;}
-export async function saveWorkspaceDraft(workspace:Workspace,owner:string|null,roomId:string,cloudScene:SavedScene|null=null){
-  const scope=draftScope(owner,roomId);
-  await saveScene(storedWorkspace(workspace,owner,cloudScene),workspace.items.filter(item=>!item.missing).map(item=>item.asset),scope,workspaceVersions(workspace));
-  await saveActiveRoom(owner??'guest',roomId);
+// Serialize device writes per account so a late write cannot replace a newer
+// snapshot or active-room pointer. A failed write must not poison later retries.
+const draftWrites = new Map<string, Promise<void>>();
+export async function saveWorkspaceDraft(workspace:Workspace,owner:string|null,roomId:string,cloudScene:SavedScene|null=null,isCurrent:()=>boolean=()=>true){
+  const identity=owner??'guest';
+  const document=storedWorkspace(workspace,owner,cloudScene);
+  const next=(draftWrites.get(identity)??Promise.resolve()).then(async()=>{
+    await saveScene(document,workspace.items.filter(item=>!item.missing).map(item=>item.asset),draftScope(owner,roomId),workspaceVersions(workspace));
+    await saveActiveRoom(identity,roomId,isCurrent);
+  });
+  const settled=next.catch(()=>{});draftWrites.set(identity,settled);
+  void settled.then(()=>{if(draftWrites.get(identity)===settled)draftWrites.delete(identity);});
+  return next;
 }
 export async function replaceDraftWithBackup(workspace:Workspace,owner:string|null,failedScope:string|undefined,roomId:string,cloudScene:SavedScene|null){
   return backupAndResetDraft(failedScope,storedWorkspace(workspace,owner,cloudScene),draftScope(owner,roomId),workspace.items.filter(item=>!item.missing).map(item=>item.asset),workspaceVersions(workspace));

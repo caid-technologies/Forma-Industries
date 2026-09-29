@@ -49,6 +49,7 @@ try {
       assert.equal(new URL(page.url()).pathname, '/');
       await expect(page.getByRole('button', { name: /Drop files or browse/ })).toBeEnabled();
       await page.getByRole('button', { name: 'New room', exact: true }).click();
+      await page.getByRole('dialog', { name: 'Unsaved room changes' }).getByRole('button', { name: 'Discard and continue' }).click();
       const initialCount = scenario.folder ? 2 : 1;
       const paths = [join(root, scenario.path), ...(scenario.cad ? [join(root, 'opencode/models/block.step')] : [])];
       const source = JSON.parse(await readFile(paths[0], 'utf8'));
@@ -122,6 +123,7 @@ try {
       await expect(page.locator('.asset')).toHaveCount(initialCount + 1);
       await expect(page.getByLabel(`${doc.name} X position`, { exact: true })).toHaveValue('2');
       await page.getByLabel('Import files').setInputFiles(path);
+      await page.getByRole('dialog', { name: 'Unsaved room changes' }).getByRole('button', { name: 'Discard and continue' }).click();
       await expect(page.getByRole('alert')).toHaveCount(0);
       await expect(page.locator('.asset')).toHaveCount(initialCount + 1);
       await expect(page.getByLabel(`${doc.name} X position`, { exact: true })).toHaveValue('2');
@@ -151,6 +153,7 @@ try {
         await expect(inspector.locator('.part-select')).toHaveCount(2);
         // Reopen the saved scene to prove recovery retains source identities/layout.
         await page.getByLabel('Import files').setInputFiles(path);
+      await page.getByRole('dialog', { name: 'Unsaved room changes' }).getByRole('button', { name: 'Discard and continue' }).click();
         await expect(page.locator('.asset')).toHaveCount(initialCount + 1);
         await expect(page.getByLabel(`${doc.name} X position`, { exact: true })).toHaveValue('2');
       }

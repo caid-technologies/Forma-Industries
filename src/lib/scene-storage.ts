@@ -75,9 +75,9 @@ export async function saveScene(scene:MergenceScene,assets:Asset[],scope?:string
 export async function loadActiveRoom(scope:string):Promise<string|undefined>{
   return transact(scope,'readonly',tx=>{const request=tx.objectStore('scenes').get(activeRoomKey(scope));return()=>{const value=request.result;return record(value)&&typeof value.roomId==='string'&&value.roomId.length<=128?value.roomId:undefined;};});
 }
-export async function saveActiveRoom(scope:string,roomId:string):Promise<void>{
+export async function saveActiveRoom(scope:string,roomId:string,isCurrent:()=>boolean=()=>true):Promise<void>{
   if(!scope||!roomId||roomId.length>128)throw new Error('Invalid active room identity.');
-  await transact(scope,'readwrite',tx=>{tx.objectStore('scenes').put({id:activeRoomKey(scope),kind:'astra.active-room',version:1,roomId,updatedAt:new Date().toISOString()});return()=>undefined;});
+  await transact(scope,'readwrite',tx=>{if(isCurrent())tx.objectStore('scenes').put({id:activeRoomKey(scope),kind:'astra.active-room',version:1,roomId,updatedAt:new Date().toISOString()});return()=>undefined;});
 }
 
 export async function loadScene(scope?:string):Promise<StoredScene|undefined>{

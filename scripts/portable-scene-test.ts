@@ -118,6 +118,7 @@ if (process.argv.includes('--browser')) {
     const open = async (page: typeof first, value: unknown) => {
       await page.getByLabel('Import files').setInputFiles({ name: 'portable-scene.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) });
       await expect(page.getByRole('button', { name: /Drop files or browse/ })).toBeEnabled();
+      if (await page.getByRole('dialog', { name: 'Unsaved room changes' }).count()) await page.getByRole('dialog', { name: 'Unsaved room changes' }).getByRole('button', { name: 'Discard and continue' }).click();
     };
     await open(first, legacyPortable);
     const backup = await first.evaluate(async ({ asset, document }) => {

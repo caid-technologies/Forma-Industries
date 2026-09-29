@@ -41,6 +41,7 @@ try {
   assert.equal(new URL(page.url()).pathname, '/');
   await expect(page.getByRole('button', { name: /Drop files or browse/ })).toBeEnabled();
   await page.getByRole('button', { name: 'New room', exact: true }).click();
+      await page.getByRole('dialog', { name: 'Unsaved room changes' }).getByRole('button', { name: 'Discard and continue' }).click();
   const source = { hardware_ir_version: '0.2', overview: { title: 'Visibility machine' }, mechanical: { render_dimensions: { x_mm: 1000, y_mm: 1000, z_mm: 1000 } } };
   await page.getByLabel('Import files').setInputFiles({ name: 'machine.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(source)) });
   await expect(page.locator('.asset')).toHaveCount(1);
@@ -89,6 +90,7 @@ try {
   await expect(page.locator('.keyframe')).toHaveCount(3);
   await seek(1); await expect(visible).not.toBeChecked();
   await page.getByLabel('Import files').setInputFiles(join(output, 'room.json'));
+  await page.getByRole('dialog', { name: 'Unsaved room changes' }).getByRole('button', { name: 'Discard and continue' }).click();
   await expect(page.getByRole('button', { name: /Drop files or browse/ })).toBeEnabled();
   await page.locator('.asset').first().click();
   await expect(page.locator('.keyframe')).toHaveCount(3);
