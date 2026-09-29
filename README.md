@@ -142,6 +142,7 @@ npm run test:workspace
 npm run test:mcp
 npm run test:mcp-scenes
 npm run test:scene-history
+npm run test:mcp-agent-workflows
 ```
 
 For browser smoke tests, run `npm start` in another terminal after building, then run `npm test`, `npm run test:gif`, or `npm run test:fullscreen`. These need Chrome. The main `npm test` suite also needs the Python Form installation and network access for a STEP fixture; the GIF suite does not need those two dependencies. Screenshots go to `test-results/`.
@@ -153,6 +154,7 @@ Live cloud tests need a dedicated Supabase test project and test-only credential
 - [Workspace guide](docs/workspace.md) — editing, animation, persistence, missing-geometry recovery, and the inspector.
 - [Form handoff contract](docs/form-handoff.md) — compiled artifacts, supported formats, provenance, and CAD resolution.
 - [Revision history and restore](docs/scene-history.md) — compare saved versions, restore a new head, and preserve exact geometry bindings.
+- [Cross-agent walkthrough](docs/mcp-agent-workflows.md) — deterministic Grok/ChatGPT/Codex fixtures, local agent setup, and create/update/reopen commands.
 - [External-agent scene authoring](docs/mcp-scenes.md) — MCP setup, typed tools, revision URLs, and the deterministic cleanroom fixture.
 - [Development and integration guide](docs/development.md) — local generation, MCP, CLI, import contracts, and GIF details.
 - [Scene links](docs/scene-links.md) — private scene/revision URLs, expiring shared links, and deployment steps.
