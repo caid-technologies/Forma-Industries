@@ -110,7 +110,7 @@ export function CaptureTools({ open, assets, room, selected, close, addAsset, on
   async function sendFeedback() {
     if (!result || !onFeedback || !feedback.trim()) return;
     setBusy(true); setError('');
-    try { await onFeedback(result.metadata, feedback); setMessage('Animation feedback sent to Forma.'); }
+    try { await onFeedback(result.metadata, feedback); setMessage('Animation feedback sent to Form.'); }
     catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
@@ -132,7 +132,7 @@ export function CaptureTools({ open, assets, room, selected, close, addAsset, on
       {scope === 'asset' && <p>{assets[selected] ? `Selected: ${assets[selected].name}` : 'Select an asset in the workspace first.'}</p>}
       {scope === 'asset' && motion === 'sample' && <p className="notice">Synthetic demonstration motion, not a physical simulation or an authored animation track.</p>}
       <button className="capture-primary" disabled={busy || !assets.length || (scope === 'asset' && !assets[selected])} onClick={() => void capture()}>Render GIF</button>
-      {!assets.length && <p>Import a Forma project or STEP file to get started.</p>}
+      {!assets.length && <p>Import a Form project or STEP file to get started.</p>}
     </> : <>
       <p>Save imported objects and their animated previews on this device. Reuse them after refreshing; clearing browser storage removes this library.</p>
       <button disabled={busy || !assets[selected]} onClick={() => void saveSelected()}>Save selected asset to library</button>
@@ -144,6 +144,6 @@ export function CaptureTools({ open, assets, room, selected, close, addAsset, on
     {busy && controller.current && <div className="capture-progress"><progress aria-label="GIF export progress" value={progress} max={1} /><button onClick={() => controller.current?.abort()}>Cancel export</button></div>}
     <p role="status" aria-label="GIF export status">{message}</p>
     {error && <p className="capture-error" role="alert">{error}</p>}
-    {resultUrl && result && <div className="capture-result"><img src={resultUrl} alt="Rendered GIF preview" /><p>{result.filename}<br />{result.metadata.durationSeconds.toFixed(2)} seconds · loops continuously</p><div className="capture-actions"><a href={resultUrl} download={result.filename}>Download GIF</a><a href={metadataUrl} download={result.filename.replace(/\.gif$/, '.json')}>Download review metadata</a></div>{result.metadata.motion === 'animation' && onFeedback && <div className="feedback-box"><label>Feedback for Forma<textarea aria-label="Animation feedback" value={feedback} maxLength={4000} placeholder="Example: raise the display assembly during the final lift so it clears the enclosure." onChange={e => setFeedback(e.target.value)} /></label><button disabled={busy || !feedback.trim()} onClick={() => void sendFeedback()}>Send feedback to Forma</button><small>The review is saved locally and consumed by the Forma/OpenCode loop. It does not change the room automatically.</small></div>}</div>}
+    {resultUrl && result && <div className="capture-result"><img src={resultUrl} alt="Rendered GIF preview" /><p>{result.filename}<br />{result.metadata.durationSeconds.toFixed(2)} seconds · loops continuously</p><div className="capture-actions"><a href={resultUrl} download={result.filename}>Download GIF</a><a href={metadataUrl} download={result.filename.replace(/\.gif$/, '.json')}>Download review metadata</a></div>{result.metadata.motion === 'animation' && onFeedback && <div className="feedback-box"><label>Feedback for Form<textarea aria-label="Animation feedback" value={feedback} maxLength={4000} placeholder="Example: raise the display assembly during the final lift so it clears the enclosure." onChange={e => setFeedback(e.target.value)} /></label><button disabled={busy || !feedback.trim()} onClick={() => void sendFeedback()}>Send feedback to Form</button><small>The review is saved locally and consumed by the Form/OpenCode loop. It does not change the room automatically.</small></div>}</div>}
   </section>;
 }

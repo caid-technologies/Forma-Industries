@@ -42,7 +42,7 @@ export type AnimationTimeline = {
   tracks: AnimationTrack[];
 };
 
-export type AstraScene = {
+export type MergenceScene = {
   workspaceDocument?: SceneManifest;
   activeCloudScene?: SavedScene | null;
   schemaVersion: typeof ASTRA_SCENE_SCHEMA_VERSION;
@@ -114,8 +114,8 @@ export function validateScene(value: unknown): string[] {
   return errors;
 }
 
-export function migratePositions(assets: Asset[], room: number[], positions: Vec3[], id = `scene-${crypto.randomUUID()}`): AstraScene {
-  const scene: AstraScene = {
+export function migratePositions(assets: Asset[], room: number[], positions: Vec3[], id = `scene-${crypto.randomUUID()}`): MergenceScene {
+  const scene: MergenceScene = {
     schemaVersion: ASTRA_SCENE_SCHEMA_VERSION,
     id,
     source: {},

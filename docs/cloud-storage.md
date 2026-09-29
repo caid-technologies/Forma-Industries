@@ -4,7 +4,7 @@
 
 Apply migrations with `npx supabase db push`, then set `VITE_CLOUD_STORAGE_ENABLED=true` and rebuild. The flag defaults to **off** for new environments; Postgres/Auth and the IndexedDB library work independently. The workbench runs locally against your configured backend.
 
-The existing public `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are sufficient. Users sign in with GitHub. **No S3 keys or service-role keys belong in the browser.** Supabase Storage is S3-compatible; Astra uses its authenticated Storage API against the same bucket, with the user's JWT and storage policies. A direct S3 signing service is unnecessary for this browser workflow. If a future backend uses the S3 protocol, configure its credentials server-side and re-evaluate its access boundary; privileged S3 access may bypass these user policies.
+The existing public `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are sufficient. Users sign in with GitHub. **No S3 keys or service-role keys belong in the browser.** Supabase Storage is S3-compatible; Mergence uses its authenticated Storage API against the same bucket, with the user's JWT and storage policies. A direct S3 signing service is unnecessary for this browser workflow. If a future backend uses the S3 protocol, configure its credentials server-side and re-evaluate its access boundary; privileged S3 access may bypass these user policies.
 
 For a local Supabase stack, explicitly enable `[storage]` and `[storage.s3_protocol]` in your local configuration before starting it. Core's default local configuration keeps those services disabled. The integration test can target a separate Supabase project via environment variables.
 
@@ -12,13 +12,13 @@ For a local Supabase stack, explicitly enable `[storage]` and `[storage.s3_proto
 
 1. Import an asset, save it in **GIF studio → Asset library**, and optionally render a preview.
 2. In **Cloud files**, select the local entry and click **Upload cloud copy**. Nothing uploads automatically when signing in or importing.
-3. The upload includes `asset.json` (normalized geometry, retained Forma project data with credential fields removed, and optional preview metadata) and `preview.gif` when available. For standalone STEP imports, you can optionally attach the **original STEP file**; its SHA-256 must match the imported source. The file is stored as `source.step`.
+3. The upload includes `asset.json` (normalized geometry, retained Form project data with credential fields removed, and optional preview metadata) and `preview.gif` when available. For standalone STEP imports, you can optionally attach the **original STEP file**; its SHA-256 must match the imported source. The file is stored as `source.step`.
 4. On another browser signed into the same account, open the cloud library and **Load cloud asset into room**. Downloads are hash/size-verified before use. GIFs and original STEP attachments can also be explicitly retrieved/downloaded.
 5. **Remove cloud copy** removes that immutable version's files and file metadata. It does not delete local library entries, room instances, or the core asset metadata row. Changed geometry/preview/source attachments create new versions; exact retries reuse the existing version.
 
-The full original binary STEP is currently attachable for standalone STEP assets. Forma geometry and retained compiled data are preserved in the JSON bundle; resolving/uploading additional companion source artifacts belongs to the fuller artifact pipeline (#20). This is not automatic room/animation cloud persistence (#27).
+The full original binary STEP is currently attachable for standalone STEP assets. Form geometry and retained compiled data are preserved in the JSON bundle; resolving/uploading additional companion source artifacts belongs to the fuller artifact pipeline (#20). This is not automatic room/animation cloud persistence (#27).
 
-Generated architectural assets tagged with generator `forma-industries` are supported after migration `20260929100000_generated_scene_assets.sql`. They retain source kind `generated`; upload validation rejects unsupported generated provenance. This enables the complete bundled cleanroom to reopen through an [MCP-authored scene URL](mcp-scenes.md).
+Generated architectural assets tagged with generator `form-industries` are supported after migration `20260929100000_generated_scene_assets.sql`. They retain source kind `generated`; upload validation rejects unsupported generated provenance. This enables the complete bundled cleanroom to reopen through an [MCP-authored scene URL](mcp-scenes.md).
 
 ## Data contract and lifecycle
 
@@ -44,7 +44,7 @@ The cloud scene adapter now registers these references transactionally through `
 - Requests time out after 60 seconds. Retry with the same local bundle to resume its pending upload, or remove the pending copy. If session credentials expire, sign back in and retry.
 - After a partial deletion, refresh and use **Retry removal**. Interrupted file writes cannot create untracked paths: every allowed path belongs to an intent. Incomplete intents are listed rather than hidden or automatically deleted.
 - Review older pending/deleting intents in the cloud list. Administrator cleanup should use the same state transition + Storage API removal sequence; never delete `storage.objects` rows directly, which would orphan physical files. Clean up versions before deleting a user/core asset.
-- Previously downloaded bytes cannot be revoked. Previously issued signed URLs/CDN copies can remain usable until their expiry/cache lifetime. Astra normally uses authenticated downloads and zero cache lifetime on upload; clearing metadata is not a promise to erase recipients' copies.
+- Previously downloaded bytes cannot be revoked. Previously issued signed URLs/CDN copies can remain usable until their expiry/cache lifetime. Mergence normally uses authenticated downloads and zero cache lifetime on upload; clearing metadata is not a promise to erase recipients' copies.
 
 ## Verification
 

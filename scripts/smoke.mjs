@@ -14,7 +14,7 @@ try {
   await page.locator('input[type=file]').setInputFiles({ name: 'lab-workbench.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(fixture)) });
   await page.getByRole('status').filter({ hasText: 'Imported 1' }).waitFor();
   await page.getByRole('heading', { name: 'Lab workbench' }).waitFor();
-  console.log('PASS Forma JSON import and visible inspector');
+  console.log('PASS Form JSON import and visible inspector');
   await page.getByRole('button', { name: 'View entire room' }).click();
   await page.getByLabel('Width', { exact: true }).fill('8');
   console.log('PASS room dimensions and camera reset');
@@ -30,10 +30,10 @@ try {
   console.log('PASS real STEP conversion and rendered asset:', await page.locator('.inspector').innerText());
   await mkdir('test-results', { recursive: true });
   await page.screenshot({ path: 'test-results/1-4-desktop.png' });
-  await page.getByText('Build with Forma', { exact: true }).click();
+  await page.getByText('Build with Form', { exact: true }).click();
   await page.getByRole('button', { name: 'Build and import' }).click();
-  await page.getByRole('status').filter({ hasText: /Forma simulation project imported|Generation failed/ }).waitFor({ timeout: 90000 });
-  console.log('Forma generation:', await page.locator('footer [role=status]').innerText());
+  await page.getByRole('status').filter({ hasText: /Form simulation project imported|Generation failed/ }).waitFor({ timeout: 90000 });
+  console.log('Form generation:', await page.locator('footer [role=status]').innerText());
   if (await page.getByRole('alert').count()) console.log('Generation error:', await page.getByRole('alert').innerText());
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: 'test-results/1-4-mobile.png', fullPage: true });

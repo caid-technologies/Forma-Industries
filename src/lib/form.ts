@@ -1,5 +1,5 @@
 import { BoxGeometry, Euler, Matrix4 } from 'three';
-import { finalizeAsset, type Asset, type FormaProject, type Part, type Vec3 } from './scene';
+import { finalizeAsset, type Asset, type FormProject, type Part, type Vec3 } from './scene';
 import { scrubCloudData } from './cloud-storage';
 
 type RecordValue = Record<string, unknown>;
@@ -20,35 +20,35 @@ function vector(value: unknown, label: string, positive = false): Vec3 {
   }) as Vec3;
 }
 
-export type FormaDocument = {
+export type FormDocument = {
   name: string; projectId?: string; version: string; mechanical: RecordValue;
-  cad: unknown; definitions: RecordValue[]; components: RecordValue[]; artifacts: RecordValue[]; project: FormaProject;
+  cad: unknown; definitions: RecordValue[]; components: RecordValue[]; artifacts: RecordValue[]; project: FormProject;
 };
 
 function artifactRecords(value: unknown): RecordValue[] {
   return Array.isArray(value) ? value.map(record).filter(item => typeof item.path === 'string') : [];
 }
 
-export function readFormaDocument(input: unknown, filename: string): FormaDocument {
+export function readFormDocument(input: unknown, filename: string): FormDocument {
   let root = record(scrubCloudData(structuredClone(input)));
   const sourceDocument = root;
-  if (Object.keys(root).length === 0) throw new Error('Expected a Forma project JSON object.');
+  if (Object.keys(root).length === 0) throw new Error('Expected a Form project JSON object.');
   if (root.response) root = record(root.response);
-  if (root.format && root.format !== 'forma-project') throw new Error(`Unsupported project format: ${root.format}`);
-  if (root.format === 'forma-project' && root.version !== 1) throw new Error(`Unsupported Forma manifest version: ${root.version}. Expected 1.`);
+  if (root.format && root.format !== 'form-project') throw new Error(`Unsupported project format: ${root.format}`);
+  if (root.format === 'form-project' && root.version !== 1) throw new Error(`Unsupported Form manifest version: ${root.version}. Expected 1.`);
   const object = record(root.project_object ?? (root.object_type ? root : undefined));
   let ir = record(root.project_ir ?? root.hardware_ir ?? root);
-  let source: FormaProject['source'] = root.project_ir ? 'project_ir' : root.hardware_ir ? 'hardware_ir' : 'raw_ir';
+  let source: FormProject['source'] = root.project_ir ? 'project_ir' : root.hardware_ir ? 'hardware_ir' : 'raw_ir';
   let revision: string | undefined;
   let projectId = text(root.project_id);
   let version: string;
   if (Object.keys(object).length && !root.project_ir && !root.hardware_ir) {
-    if (object.object_type !== 'forma.project') throw new Error('Unsupported project object type. Expected forma.project.');
-    // Forma object/namespace versions are revision counters, not schema versions.
-    if (!Number.isInteger(object.version) || Number(object.version) < 1) throw new Error('Invalid Forma project revision.');
-    if (!Array.isArray(object.namespaces)) throw new Error('Forma project namespaces must be an array.');
+    if (object.object_type !== 'form.project') throw new Error('Unsupported project object type. Expected form.project.');
+    // Form object/namespace versions are revision counters, not schema versions.
+    if (!Number.isInteger(object.version) || Number(object.version) < 1) throw new Error('Invalid Form project revision.');
+    if (!Array.isArray(object.namespaces)) throw new Error('Form project namespaces must be an array.');
     const namespaces = object.namespaces.map(record);
-    if (new Set(namespaces.map(n=>n.name)).size !== namespaces.length) throw new Error('Duplicate Forma namespace name.');
+    if (new Set(namespaces.map(n=>n.name)).size !== namespaces.length) throw new Error('Duplicate Form namespace name.');
     const payload = (name: string) => record(namespaces.find(n => n.name === name)?.payload);
     const meta = payload('project.meta');
     const schema = text(meta.hardware_ir_version, '0.2');
@@ -68,21 +68,21 @@ export function readFormaDocument(input: unknown, filename: string): FormaDocume
   const metadata = record(ir.assembly_metadata);
   const overview = record(ir.overview);
   for (const field of ['overview','mechanical','validation','assembly_metadata']) {
-    if (ir[field] !== undefined && ir[field] !== null && (typeof ir[field] !== 'object' || Array.isArray(ir[field]))) throw new Error(`Forma ${field} must be an object.`);
+    if (ir[field] !== undefined && ir[field] !== null && (typeof ir[field] !== 'object' || Array.isArray(ir[field]))) throw new Error(`Form ${field} must be an object.`);
   }
   for (const field of ['components','part_definitions','bom','nets']) {
-    if (ir[field] !== undefined && (!Array.isArray(ir[field]) || (ir[field] as unknown[]).some(v=>!v||typeof v!=='object'||Array.isArray(v)))) throw new Error(`Forma ${field} must be an array of records.`);
+    if (ir[field] !== undefined && (!Array.isArray(ir[field]) || (ir[field] as unknown[]).some(v=>!v||typeof v!=='object'||Array.isArray(v)))) throw new Error(`Form ${field} must be an array of records.`);
   }
   const refs = new Set<string>();
   for (const component of (Array.isArray(ir.components)?ir.components:[]).map(record)) {
-    if (!text(component.ref_des) || refs.has(String(component.ref_des))) throw new Error(`Duplicate or missing Forma component ref_des: ${component.ref_des}`);
+    if (!text(component.ref_des) || refs.has(String(component.ref_des))) throw new Error(`Duplicate or missing Form component ref_des: ${component.ref_des}`);
     refs.add(String(component.ref_des));
   }
   projectId ||= text(metadata.project_id);
   const revisionValue = root.revision ?? metadata.revision;
   revision ||= typeof revisionValue === 'number' || typeof revisionValue === 'string' ? String(revisionValue) : undefined;
   const artifacts = artifactRecords(root.artifacts ?? ir.artifacts);
-  const project: FormaProject = { projectId: projectId || undefined, revision, agent: text(root.agent ?? ir.agent ?? metadata.source_agent ?? metadata.agent) || undefined, hardwareIrVersion: version.split(' / ')[0], ir, source, sourceDocument, artifacts };
+  const project: FormProject = { projectId: projectId || undefined, revision, agent: text(root.agent ?? ir.agent ?? metadata.source_agent ?? metadata.agent) || undefined, hardwareIrVersion: version.split(' / ')[0], ir, source, sourceDocument, artifacts };
   return {
     name: text(root.title, text(overview.title, filename.replace(/\.json$/i, ''))),
     projectId: projectId || text(metadata.project_id) || undefined,
@@ -114,9 +114,9 @@ function meshRecords(cad: unknown): unknown[] | undefined {
   }
 }
 
-export function importForma(input: unknown, filename: string, digest: string): Asset {
-  const doc = readFormaDocument(input, filename);
-  const id = `forma-${digest}`;
+export function importForm(input: unknown, filename: string, digest: string): Asset {
+  const doc = readFormDocument(input, filename);
+  const id = `form-${digest}`;
   const parts: Part[] = [];
   const warnings: string[] = [];
   const placements = doc.mechanical.component_placements;
@@ -168,7 +168,7 @@ export function importForma(input: unknown, filename: string, digest: string): A
             partNumber: text(definition.part_number), representation: 'Approximate component envelope' } });
         geometry.dispose();
       }
-      warnings.push('Showing approximate component envelopes from Forma mechanical placements, not fabrication-ready CAD surfaces.');
+      warnings.push('Showing approximate component envelopes from Form mechanical placements, not fabrication-ready CAD surfaces.');
     } else if (doc.mechanical.render_dimensions) {
       const geometry = new BoxGeometry(...vector(doc.mechanical.render_dimensions, 'render_dimensions', true));
       geometry.rotateX(-Math.PI / 2); geometry.scale(0.001, 0.001, 0.001);
@@ -179,9 +179,9 @@ export function importForma(input: unknown, filename: string, digest: string): A
     }
     if (doc.cad) warnings.push('Referenced CAD is unavailable or unsupported. Select its STEP file together with the JSON to resolve local geometry.');
   }
-  if (!parts.length) throw new Error('This Forma project has no usable geometry. Include its referenced STEP file, inline CAD meshes, or mechanical placements.');
+  if (!parts.length) throw new Error('This Form project has no usable geometry. Include its referenced STEP file, inline CAD meshes, or mechanical placements.');
   const hierarchy = { id: `${id}/root`, name: doc.name, partIds: [], children: parts.map(part => ({ id: part.id, name: part.name, partIds: [part.id], children: [] })) };
-  return finalizeAsset({ id, name: doc.name, source: { kind: 'forma', filename, digest, projectId: doc.projectId, version: doc.version }, parts,
-    formaProject: doc.project,
+  return finalizeAsset({ id, name: doc.name, source: { kind: 'form', filename, digest, projectId: doc.projectId, version: doc.version }, parts,
+    formProject: doc.project,
     hierarchy, warnings });
 }

@@ -15,7 +15,7 @@ const users:{id:string;client:ReturnType<typeof createClient>;session:Session|nu
 const prefix=`astra-workspace-${randomUUID()}`;
 const browser=await chromium.launch({channel:'chrome',headless:true});const errors:string[]=[];
 async function newUser(){
-  const email=`${prefix}-${users.length}@example.invalid`,password=`Astra-${randomUUID()}!`;
+  const email=`${prefix}-${users.length}@example.invalid`,password=`Mergence-${randomUUID()}!`;
   const created=await admin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{user_name:'workspace-test'}});if(created.error)throw created.error;
   const client=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});const result={id:created.data.user!.id,client,session:null as Session|null};users.push(result);
   const signed=await client.auth.signInWithPassword({email,password});if(signed.error)throw signed.error;result.session=signed.data.session;return result;
@@ -30,7 +30,7 @@ async function downloaded(page:Page,action:()=>Promise<unknown>){const event=pag
 async function waitSave(page:Page,text:string){const panel=page.getByRole('region',{name:'Scene persistence'});await expect.poll(async()=>{if(await panel.getByRole('alert').count())throw new Error(await panel.getByRole('alert').innerText());return panel.getByRole('status').innerText();},{timeout:120000}).toContain(text);}
 try{
   const a=await newUser(),b=await newUser();const first=await newPage(a.session!);const page=first.page;
-  const fixture={format:'forma-project',version:1,project_id:prefix,agent:'codex',project_ir:{hardware_ir_version:'0.2',assembly_metadata:{revision:4},overview:{title:'Factory bench',description:'Fabrication demo fixture'},components:[{ref_des:'BENCH',name:'Bench top'}],bom:[{name:'Bench assembly',quantity:1}],validation:{warning:[{description:'Check clearance around the bench'}]},mechanical:{component_placements:[{ref_des:'BENCH',label:'Bench top',position:{x_mm:0,y_mm:0,z_mm:450},size:{x_mm:1800,y_mm:800,z_mm:900}}]}}};
+  const fixture={format:'form-project',version:1,project_id:prefix,agent:'codex',project_ir:{hardware_ir_version:'0.2',assembly_metadata:{revision:4},overview:{title:'Factory bench',description:'Fabrication demo fixture'},components:[{ref_des:'BENCH',name:'Bench top'}],bom:[{name:'Bench assembly',quantity:1}],validation:{warning:[{description:'Check clearance around the bench'}]},mechanical:{component_placements:[{ref_des:'BENCH',label:'Bench top',position:{x_mm:0,y_mm:0,z_mm:450},size:{x_mm:1800,y_mm:800,z_mm:900}}]}}};
   const file={name:'factory.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fixture))};
   await page.locator('input[aria-label="Import files"]').setInputFiles(file);
   await expect(page.getByRole('heading',{name:'Factory bench'})).toBeVisible();

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { Euler,MathUtils,Quaternion } from 'three';
-import { importForma,readFormaDocument } from '../src/lib/forma.ts';
+import { importForm,readFormDocument } from '../src/lib/form.ts';
 import { appendAssets,emptyWorkspace,evaluateWorkspace,writeKeyframe,makeManifest,readManifest,hydrateManifest,canonicalJSON } from '../src/lib/workspace.ts';
 import { createWorld,applyWorldPoses } from '../src/lib/world.ts';
 import { ImportService } from '../src/lib/imports.ts';
@@ -14,8 +14,8 @@ import { parseCloudBundle } from '../src/lib/cloud-storage.ts';
 import { SceneRepository } from '../src/lib/scene-repository.ts';
 
 const fixture={hardware_ir_version:'0.2',overview:{title:'Lab fixture'},assembly_metadata:{project_id:'project-1',revision:7,source_agent:'codex',api_key:'secret-fixture'},components:[{ref_des:'U1',name:'Sensor'},{ref_des:'U2',name:'Display'}],bom:[{name:'Sensor',quantity:1}],validation:{warning:[{description:'Check mounting clearance'}]},mechanical:{component_placements:[{ref_des:'U1',label:'Sensor',position:{x_mm:0,y_mm:0,z_mm:50},size:{x_mm:100,y_mm:200,z_mm:100}},{ref_des:'U2',label:'Display',position:{x_mm:200,y_mm:0,z_mm:50},size:{x_mm:100,y_mm:100,z_mm:100}}]}};
-const raw=JSON.stringify(fixture);const asset=importForma(fixture,'fixture.json','digest-1');
-assert.equal(asset.formaProject?.revision,'7');assert.equal(asset.formaProject?.projectId,'project-1');assert.equal(asset.formaProject?.source,'raw_ir');assert.equal(asset.formaProject?.agent,'codex');assert(!JSON.stringify(asset).includes('secret-fixture'));
+const raw=JSON.stringify(fixture);const asset=importForm(fixture,'fixture.json','digest-1');
+assert.equal(asset.formProject?.revision,'7');assert.equal(asset.formProject?.projectId,'project-1');assert.equal(asset.formProject?.source,'raw_ir');assert.equal(asset.formProject?.agent,'codex');assert(!JSON.stringify(asset).includes('secret-fixture'));
 let workspace=appendAssets(emptyWorkspace(),[asset,asset]);
 assert.notEqual(workspace.items[0].id,workspace.items[1].id);
 assert(workspace.items[1].position[0]>workspace.items[0].position[0]+asset.dimensions[0]);
@@ -30,7 +30,7 @@ const q=new Quaternion().setFromEuler(new Euler(...pose[0].rotation.map(MathUtil
 assert.equal(evaluateWorkspace(workspace.items,workspace.animation,null)[0].position[0],2);
 const feedback=makeAnimationFeedback(workspace,{schemaVersion:1,units:'m',upAxis:'Y',scope:'room',motion:'animation',width:480,height:480,frameCount:2,frameDelayMs:100,durationSeconds:.2,room:workspace.room,assets:[],note:'review',animation:workspace.animation,frames:[{time:0,instances:[]},{time:.1,instances:[]}]},'Raise the sensor during the final movement.');
 assert.equal(feedback.format,'astra.animation-feedback');assert.equal(feedback.version,1);assert.equal(feedback.instruction,'Raise the sensor during the final movement.');assert(!JSON.stringify(feedback).includes('secret-fixture'));
-assert.equal(inferSpaceBrief('I need sterile culture and cold storage'),'biofab');const demo=buildSpace('manufacturing','A compact production line');assert.equal(demo.workspace.room[0],14);assert.equal(demo.workspace.items.length,6);assert.equal(demo.workspace.animation.tracks.length,1);assert(demo.workspace.items.every(item=>item.asset.warnings[0].includes('Forma OSS')));
+assert.equal(inferSpaceBrief('I need sterile culture and cold storage'),'biofab');const demo=buildSpace('manufacturing','A compact production line');assert.equal(demo.workspace.room[0],14);assert.equal(demo.workspace.items.length,6);assert.equal(demo.workspace.animation.tracks.length,1);assert(demo.workspace.items.every(item=>item.asset.warnings[0].includes('Form OSS')));
 const world=createWorld(workspace.items.map(i=>i.asset),workspace.room);applyWorldPoses(world.groups,pose);assert.equal(world.groups[0].position.x,3);world.dispose();
 assert.equal(JSON.stringify(fixture),raw);
 const portable=makeManifest(workspace,true);const reopened=hydrateManifest(readManifest(JSON.parse(JSON.stringify(portable))),[]);
@@ -50,17 +50,17 @@ await assert.rejects(()=>new CloudStorage({} as any,'owner').upload({id:cleanroo
 const badGenerated=structuredClone(cleanroomManifest);delete (badGenerated.bundledAssets![0].source as any).generator;assert.throws(()=>hydrateManifest(badGenerated,[]),/Unsupported or incomplete/);
 const restored=appendAssets(missing,[asset]);assert(restored.items.every(i=>!i.missing));assert.equal(restored.items[0].id,id);assert.equal(restored.items[0].position[0],2);
 const invalid=structuredClone(portable);invalid.instances[0].position[0]=Infinity;assert.throws(()=>readManifest(invalid),/transform/);
-const duplicate=structuredClone(fixture);duplicate.components[1].ref_des='U1';assert.throws(()=>importForma(duplicate,'bad.json','bad'),/Duplicate/);
-const unknown=structuredClone(fixture);unknown.mechanical.component_placements[1].ref_des='MISSING';assert.throws(()=>importForma(unknown,'bad.json','bad'),/Unknown/);
+const duplicate=structuredClone(fixture);duplicate.components[1].ref_des='U1';assert.throws(()=>importForm(duplicate,'bad.json','bad'),/Duplicate/);
+const unknown=structuredClone(fixture);unknown.mechanical.component_placements[1].ref_des='MISSING';assert.throws(()=>importForm(unknown,'bad.json','bad'),/Unknown/);
 for(const agent of ['sdk','opencode','codex']){
-  const doc=readFormaDocument({format:'forma-project',version:1,project_id:'compiled-project',agent,project_ir:fixture,artifacts:[]},'forma-project.json');assert.equal(doc.project.agent,agent);assert.equal(doc.project.revision,'7');assert.deepEqual(doc.project.ir.bom,fixture.bom);
+  const doc=readFormDocument({format:'form-project',version:1,project_id:'compiled-project',agent,project_ir:fixture,artifacts:[]},'form-project.json');assert.equal(doc.project.agent,agent);assert.equal(doc.project.revision,'7');assert.deepEqual(doc.project.ir.bom,fixture.bom);
 }
-const namespace={object_type:'forma.project',object_id:'namespaced-project',version:9,namespaces:[{name:'project.meta',payload:{hardware_ir_version:'0.2',assembly_metadata:{source_agent:'opencode'}}},{name:'product.overview',payload:{overview:fixture.overview}},{name:'product.mech',payload:{mechanical:fixture.mechanical}},{name:'product.electrical',payload:{components:fixture.components}},{name:'product.bom',payload:{line_items:fixture.bom}},{name:'product.validation',payload:{validation:fixture.validation}},{name:'project.docs',payload:{notes:'Retained authoring details'}}]};
-const namespaced=importForma(namespace,'namespace.json','namespace');assert.equal(namespaced.formaProject?.revision,'9');assert.deepEqual(namespaced.formaProject?.ir.validation,fixture.validation);assert.deepEqual(namespaced.formaProject?.ir.bom,fixture.bom);assert.equal(namespaced.formaProject?.sourceDocument?.object_type,'forma.project');
+const namespace={object_type:'form.project',object_id:'namespaced-project',version:9,namespaces:[{name:'project.meta',payload:{hardware_ir_version:'0.2',assembly_metadata:{source_agent:'opencode'}}},{name:'product.overview',payload:{overview:fixture.overview}},{name:'product.mech',payload:{mechanical:fixture.mechanical}},{name:'product.electrical',payload:{components:fixture.components}},{name:'product.bom',payload:{line_items:fixture.bom}},{name:'product.validation',payload:{validation:fixture.validation}},{name:'project.docs',payload:{notes:'Retained authoring details'}}]};
+const namespaced=importForm(namespace,'namespace.json','namespace');assert.equal(namespaced.formProject?.revision,'9');assert.deepEqual(namespaced.formProject?.ir.validation,fixture.validation);assert.deepEqual(namespaced.formProject?.ir.bom,fixture.bom);assert.equal(namespaced.formProject?.sourceDocument?.object_type,'form.project');
 const mixed=structuredClone(fixture) as any;mixed.cad_model={meshes:[{ref_des:'U1',name:'Sensor CAD',vertices:[0,0,0,100,0,0,0,100,0],faces:[0,1,2]}]};
-const mixedAsset=importForma(mixed,'mixed.json','mixed');assert.equal(mixedAsset.parts.length,2);assert.equal(mixedAsset.parts[0].metadata.representation,'CAD mesh');assert.equal(mixedAsset.parts[1].metadata.ref,'U2');
+const mixedAsset=importForm(mixed,'mixed.json','mixed');assert.equal(mixedAsset.parts.length,2);assert.equal(mixedAsset.parts[0].metadata.representation,'CAD mesh');assert.equal(mixedAsset.parts[1].metadata.ref,'U2');
 const bytes=new TextEncoder().encode('STEP fixture bytes');const hash=await digestBytes(bytes.buffer);
 const fakeConverter=async()=>({success:true,root:{name:'Assembly',meshes:[0],children:[]},meshes:[{name:'Sensor',attributes:{position:{array:[0,0,0,100,0,0,0,100,0]}},index:{array:[0,1,2]}}]});
-const service=new ImportService(fakeConverter);const manifest={format:'forma-project',version:1,project_id:'CAD-project',agent:'sdk',project_ir:{...fixture,cad_model:{path:'cad/assembly.step'}},artifacts:[{path:'cad/assembly.step',sha256:hash.toUpperCase()}]};
-const imported=await service.files([new File([JSON.stringify(manifest)],'forma-project.json'),new File([bytes],'assembly.step')],{upAxis:'Z',scale:1},()=>{});assert.equal(imported[0].formaProject?.projectId,'CAD-project');assert.equal(imported[0].formaProject?.agent,'sdk');assert.deepEqual(imported[0].formaProject?.ir.validation,fixture.validation);
+const service=new ImportService(fakeConverter);const manifest={format:'form-project',version:1,project_id:'CAD-project',agent:'sdk',project_ir:{...fixture,cad_model:{path:'cad/assembly.step'}},artifacts:[{path:'cad/assembly.step',sha256:hash.toUpperCase()}]};
+const imported=await service.files([new File([JSON.stringify(manifest)],'form-project.json'),new File([bytes],'assembly.step')],{upAxis:'Z',scale:1},()=>{});assert.equal(imported[0].formProject?.projectId,'CAD-project');assert.equal(imported[0].formProject?.agent,'sdk');assert.deepEqual(imported[0].formProject?.ir.validation,fixture.validation);
 console.log('PASS shared instance/part transforms, rotation interpolation, immutable source, portable/missing-asset round trips, SDK/agent wrappers, namespace/BOM/validation retention, mixed geometry, and companion-CAD provenance.');

@@ -73,7 +73,7 @@ export function writeKeyframe(animation: Animation, instanceId: string, partId: 
 export function makeManifest(workspace: Workspace, bundle = false): SceneManifest {
   const assets = [...new Map(workspace.items.map(item => [item.asset.id, item.asset])).values()];
   return scrubCloudData({ format: 'astra.scene', version: 1, units: 'm', upAxis: 'Y', room: workspace.room,
-    assets: assets.map(({ id, name, source, dimensions, formaProject }) => ({ id, name, source, dimensions, projectRevision: formaProject?.revision })),
+    assets: assets.map(({ id, name, source, dimensions, formProject }) => ({ id, name, source, dimensions, projectRevision: formProject?.revision })),
     instances: workspace.items.map(({ id, name, asset, position, rotation, visible, cloudVersionId }) => ({ id, name, assetId: asset.id, position, rotation, visible, cloudVersionId })),
     animation: workspace.animation,
     ...(bundle ? { bundledAssets: assets.filter(asset => !workspace.items.find(item => item.asset.id === asset.id)?.missing) } : {}),
@@ -84,12 +84,12 @@ const validString = (v: unknown): v is string => typeof v === 'string' && v.leng
 export function readManifest(value: unknown): SceneManifest {
   const m = value as SceneManifest;
   if (!m || m.format !== 'astra.scene' || m.version !== 1 || m.units !== 'm' || m.upAxis !== 'Y' || !validVector(m.room) || !m.room.every(n => n >= 1 && n <= 100)
-      || !Array.isArray(m.assets) || m.assets.length > 1000 || !Array.isArray(m.instances) || m.instances.length > 1000) throw new Error('Unsupported or invalid Astra scene manifest.');
+      || !Array.isArray(m.assets) || m.assets.length > 1000 || !Array.isArray(m.instances) || m.instances.length > 1000) throw new Error('Unsupported or invalid Mergence scene manifest.');
   const assetIds = new Set<string>();
   for (const asset of m.assets) {
     if (!validString(asset.id) || assetIds.has(asset.id) || !validString(asset.name) || !validVector(asset.dimensions) || asset.dimensions.some(n => n < 0)
-        || !asset.source || !['forma','step','generated'].includes(asset.source.kind) || !validString(asset.source.filename) || !validString(asset.source.digest)
-        || (asset.source.kind === 'generated' && asset.source.generator !== 'forma-industries')
+        || !asset.source || !['form','step','generated'].includes(asset.source.kind) || !validString(asset.source.filename) || !validString(asset.source.digest)
+        || (asset.source.kind === 'generated' && asset.source.generator !== 'form-industries')
         || (asset.projectRevision !== undefined && !validString(asset.projectRevision))) throw new Error('Invalid or duplicate scene asset reference.');
     assetIds.add(asset.id);
   }
@@ -119,7 +119,7 @@ export function missingAsset(ref: AssetReference): Asset {
   geometry.translate(0, ref.dimensions[1] / 2, 0);
   const part = { id: `${ref.id}/missing`, name: 'Missing geometry — reimport original source', vertices: Array.from(geometry.attributes.position.array), indices: Array.from(geometry.index!.array), color: [.7,.25,.2] as Vec3, metadata: { representation: 'Missing geometry placeholder' } };
   geometry.dispose();
-  return { ...ref, schemaVersion: 1, units: 'm', upAxis: 'Y', originOffset: [0,0,0], parts: [part], hierarchy: { id: `${ref.id}/root`, name: ref.name, partIds: [part.id], children: [] }, warnings: ['Geometry unavailable. Reimport the matching source or enable cloud storage.'], ...(ref.projectRevision ? {formaProject:{projectId:ref.source.projectId,revision:ref.projectRevision,hardwareIrVersion:ref.source.version?.split(' / ')[0]??'0.2',ir:{},source:'raw_ir' as const}} : {}) };
+  return { ...ref, schemaVersion: 1, units: 'm', upAxis: 'Y', originOffset: [0,0,0], parts: [part], hierarchy: { id: `${ref.id}/root`, name: ref.name, partIds: [part.id], children: [] }, warnings: ['Geometry unavailable. Reimport the matching source or enable cloud storage.'], ...(ref.projectRevision ? {formProject:{projectId:ref.source.projectId,revision:ref.projectRevision,hardwareIrVersion:ref.source.version?.split(' / ')[0]??'0.2',ir:{},source:'raw_ir' as const}} : {}) };
 }
 export function hydrateManifest(manifest: SceneManifest, available: Asset[]): Workspace {
   const assets = new Map(available.map(asset => [asset.id, asset]));
@@ -130,7 +130,7 @@ export function hydrateManifest(manifest: SceneManifest, available: Asset[]): Wo
   const items = manifest.instances.map(({ assetId, ...instance }) => {
     const ref = manifest.assets.find(a => a.id === assetId)!;
     const asset = assets.get(assetId);
-    if (asset && (asset.source.digest !== ref.source.digest || asset.source.version !== ref.source.version || (ref.projectRevision !== undefined && asset.formaProject?.revision !== ref.projectRevision))) throw new Error(`Source revision mismatch for ${ref.name}.`);
+    if (asset && (asset.source.digest !== ref.source.digest || asset.source.version !== ref.source.version || (ref.projectRevision !== undefined && asset.formProject?.revision !== ref.projectRevision))) throw new Error(`Source revision mismatch for ${ref.name}.`);
     return { ...instance, asset: asset ?? missingAsset(ref), missing: !asset };
   });
   for (const track of manifest.animation.tracks) {
