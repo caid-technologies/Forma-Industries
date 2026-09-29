@@ -17,7 +17,7 @@ const ir = {
   cad_model: { model: { meshes: [{ name: 'Bench', ref_des: 'BENCH', vertices: [0, 0, 0, 100, 0, 0, 0, 100, 0], faces: [0, 1, 2] }] } },
 };
 const manifest = { format: 'form-project', version: 1, project_id: 'portable-project', agent: 'codex', project_ir: ir,
-  artifacts: [{ path: 'cad/bench.step', sha256: 'source-digest', runtimeConfig: runtime }],
+  artifacts: [{ path: 'cad/bench.step', sha256: 'a'.repeat(64), runtimeConfig: runtime }],
   providerConfig: runtime, response_metadata: [{ authentication: { access_token: 'access-canary' }, configuration: runtime }],
 };
 const namespaced = { object_type: 'form.project', object_id: 'portable-project', version: 7, namespaces: [

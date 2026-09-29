@@ -108,7 +108,9 @@ const mechanical = object({ physical_form: text, enclosure_type: text, mounting_
   motion_intents: optional(array(motion)), cad_operations: optional(array(dictionary)), mechanism_benchmark: optional(nullable(dictionary)) });
 const provenance = object({ project_id: text, revision: optional(revision), source_agent: text, agent: text, authoring_agent: text, compile_revision: optional(revision),
   created_at: text, updated_at: text, generated_at: text, generation_timestamp: text });
-const artifact = object({ path: nonempty, sha256: optional(nonempty), kind: text, mime_type: text, size_bytes: optional(nonnegative) });
+const sha256: Check<string> = { read: (v, p) => typeof v === 'string' && /^[a-f0-9]{64}$/i.test(v)
+  ? v : invalid(p, 'a SHA-256 digest of exactly 64 hexadecimal characters') };
+const artifact = object({ path: nonempty, sha256: optional(sha256), kind: text, mime_type: text, size_bytes: optional(nonnegative) });
 const assemblyStep = object({ step_num: optional(count), title: text, description: text, danger_flag: optional(boolean),
   danger_message: nullableText, affected_components: optionalStrings });
 const requirements = object({ requirements: optionalStrings, power_needs: text, operating_voltage: numeric,

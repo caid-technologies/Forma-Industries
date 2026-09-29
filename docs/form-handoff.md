@@ -19,7 +19,7 @@ The preferred file is a `form-project.json` manifest containing a compiled `proj
     "part_definitions": []
   },
   "agent": "opencode",
-  "artifacts": [{ "path": "models/enclosure.step", "sha256": "..." }]
+  "artifacts": [{ "path": "models/enclosure.step" }]
 }
 ```
 
@@ -68,9 +68,15 @@ Deterministic checks: `npm run test:portable-scenes` covers nested wrappers, ret
 
 ## CAD Resolution
 
-Mergence resolves CAD only from files explicitly selected with the project JSON. A CAD reference may be a path, filename, or nested CAD source object. The importer matches normalized paths or filenames and verifies an `artifacts[].sha256` value when supplied.
+Mergence resolves CAD only from files explicitly selected with the project JSON. A CAD reference may be a path, filename, or nested CAD source object. Use **Import project folder** to retain the selected folder's relative paths, or select the JSON and STEP files together with the ordinary file picker.
 
-Remote URLs and server-local paths are metadata only and are not fetched automatically. Missing CAD may fall back to `mechanical.component_placements` or `mechanical.render_dimensions` envelopes when those fields are available.
+For folder imports, references are relative to the JSON file's directory: `Root/form-project.json` plus `cad/part.step` resolves to `Root/cad/part.step`, even when `Root/other/part.step` is also selected. Nested project directories and multiple project manifests each use their own base directory. Separators, redundant `.` segments and repeated separators are normalized; filename matching remains case-sensitive. An exact path wins over basename matches. A missing folder-relative file never binds to a different directory just because its basename matches. Separately selected files without directory information retain unique-basename fallback; ambiguous matches are rejected. Other selected STEP files remain independent scene assets.
+
+Every declared `artifacts[].sha256` must be a string containing exactly 64 hexadecimal characters, including declarations whose files are missing. Hashes are optional, accept upper/lowercase, and retain their original spelling in the source document. Invalid declarations fail before geometry conversion or envelope fallback. The resolved companion's bytes must match its declared digest before cached or newly converted geometry is used. Normalized exact artifact declarations take precedence over unique-basename declaration fallback; duplicate/ambiguous declarations and checksum mismatches fail with actionable errors.
+
+Remote URLs, URI schemes, absolute server/drive/UNC paths and references containing `..` are metadata only. They are neither fetched nor matched to a local namesake automatically. Missing CAD may fall back to `mechanical.component_placements` or `mechanical.render_dimensions` envelopes when those fields are available; projects without usable geometry fail explicitly. A failed import leaves the current scene and its placements unchanged.
+
+`npm run test:cad` covers directory roots, nested projects, duplicate names, declaration identity and malformed/mismatched hashes. `npm run test:form-workflows-browser` exercises the actual folder picker and CAD worker, same-named files in separate directories, missing CAD, integrity/ambiguity errors, preservation of the existing scene and recovery through scene reopen.
 
 Form mechanical placement coordinates are millimeters with Z-up. Mergence normalizes imported geometry to meters with Y-up and keeps the normalization offset in the scene asset metadata.
 
@@ -115,4 +121,4 @@ Optional sections may be absent. Nullable overview, mechanical, requirements, ar
 
 Validation retains the sanitized source document and all extension fields without coercion, defaults or IR-version migration. In particular, legacy 0.1 component quantities are not expanded into invented geometry. Open-ended CAD adapters, electrical specifications, instance configurations and vendor namespaces remain data rather than execution instructions. Structured runtime settings and secrets remain excluded by the portable-data policy above.
 
-This is import structure validation, not a rerun of the upstream compiler's electrical, BOM consistency or manufacturing checks. Existing compiler findings are retained for inspection, including unsuccessful validation results. The deterministic `npm run test:form-import` suite covers both IR versions, all supported wrappers, legacy identifiers, missing/malformed fields, source retention, normalized geometry, companion-CAD imports and portable round trips. Attributable workflow-produced fixtures remain a separate #21 follow-up.
+This is import structure validation, not a rerun of the upstream compiler's electrical, BOM consistency or manufacturing checks. Existing compiler findings are retained for inspection, including unsuccessful validation results. The deterministic `npm run test:form-import` suite covers both IR versions, all supported wrappers, legacy identifiers, missing/malformed fields, source retention, normalized geometry, companion-CAD imports and portable round trips. Attributable SDK/portable-agent workflow captures and reproduction instructions are in `scripts/fixtures/form-workflows`; `test:form-workflows` and `test:form-workflows-browser` verify those outputs without provider credentials.
