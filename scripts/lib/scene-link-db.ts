@@ -2,7 +2,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { readFile, readdir } from 'node:fs/promises';
 
 /** Real PostgreSQL semantics; only the Supabase-owned auth/storage schemas are stubbed. */
-export async function sceneLinkDB(beforeLinks?: (db:PGlite)=>Promise<void>) {
+export async function sceneLinkDB(beforeLinks?: (db:PGlite)=>Promise<void>, beforeHistory?: (db:PGlite)=>Promise<void>) {
   const db = new PGlite();
   await db.exec(`
     create role anon; create role authenticated; create role service_role;
@@ -18,6 +18,7 @@ export async function sceneLinkDB(beforeLinks?: (db:PGlite)=>Promise<void>) {
   const paths = (await readdir('supabase/migrations')).filter(path => path.endsWith('.sql')).sort();
   for (const path of paths) {
     if(path==='20260929040000_scene_revision_links.sql')await beforeLinks?.(db);
+    if(path==='20260929120000_scene_history.sql')await beforeHistory?.(db);
     await db.exec(await readFile(`supabase/migrations/${path}`, 'utf8'));
   }
   async function asUser<T>(owner:string|null, work:()=>Promise<T>) {

@@ -2,6 +2,7 @@ import { Box3, BoxGeometry, Euler, Matrix4, Quaternion, MathUtils, Vector3 } fro
 import type { Asset, Vec3 } from './scene';
 import { parseCloudBundle, scrubCloudData } from './cloud-storage';
 
+export type VersionedAsset = { cloudVersionId: string; asset: Asset };
 export type Pose = { position: Vec3; rotation: Vec3 };
 export type SceneItem = Pose & { id: string; name: string; asset: Asset; visible: boolean; cloudVersionId?: string; missing?: boolean };
 export type Keyframe = Pose & { id: string; time: number };
@@ -13,7 +14,7 @@ export type AssetReference = Pick<Asset, 'id' | 'name' | 'source' | 'dimensions'
 export type SceneManifest = {
   format: 'astra.scene'; version: 1; units: 'm'; upAxis: 'Y'; room: Vec3;
   assets: AssetReference[]; instances: (Pose & { id: string; name: string; assetId: string; visible: boolean; cloudVersionId?: string })[];
-  animation: Animation; bundledAssets?: Asset[];
+  animation: Animation; bundledAssets?: Asset[]; bundledVersions?: VersionedAsset[];
 };
 
 export const zeroPose = (): Pose => ({ position: [0, 0, 0], rotation: [0, 0, 0] });
@@ -25,9 +26,10 @@ export function canonicalJSON(value: unknown): string {
 export function appendAssets(workspace: Workspace, assets: Asset[], cloudVersionId?: string): Workspace {
   let items = [...workspace.items];
   for (const asset of assets) {
-    const missing = items.some(item => item.missing && item.asset.id === asset.id);
+    const canRepair = (item: SceneItem) => item.missing && item.asset.id === asset.id && (!item.cloudVersionId || item.cloudVersionId === cloudVersionId);
+    const missing = items.some(canRepair);
     if (missing) {
-      items = items.map(item => item.missing && item.asset.id === asset.id ? { ...item, asset, missing: false, cloudVersionId: cloudVersionId ?? item.cloudVersionId } : item);
+      items = items.map(item => canRepair(item) ? { ...item, asset, missing: false, cloudVersionId } : item);
       continue;
     }
     const right = items.length ? Math.max(...items.map(item => {
@@ -76,7 +78,10 @@ export function makeManifest(workspace: Workspace, bundle = false): SceneManifes
     assets: assets.map(({ id, name, source, dimensions, formProject }) => ({ id, name, source, dimensions, projectRevision: formProject?.revision })),
     instances: workspace.items.map(({ id, name, asset, position, rotation, visible, cloudVersionId }) => ({ id, name, assetId: asset.id, position, rotation, visible, cloudVersionId })),
     animation: workspace.animation,
-    ...(bundle ? { bundledAssets: assets.filter(asset => !workspace.items.find(item => item.asset.id === asset.id)?.missing) } : {}),
+    ...(bundle ? {
+      bundledAssets: [...new Map(workspace.items.filter(item => !item.missing && !item.cloudVersionId).map(item => [item.asset.id, item.asset])).values()],
+      bundledVersions: [...new Map(workspace.items.filter(item => !item.missing && item.cloudVersionId).map(item => [item.cloudVersionId!, { cloudVersionId: item.cloudVersionId!, asset: item.asset }])).values()],
+    } : {}),
   }) as SceneManifest;
 }
 const validVector = (v: unknown): v is Vec3 => Array.isArray(v) && v.length === 3 && v.every(n => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= 1e6);
@@ -112,30 +117,56 @@ export function readManifest(value: unknown): SceneManifest {
       times.add(key.time); keyIds.add(key.id);
     }
   }
+  if (m.bundledVersions !== undefined) {
+    if (!Array.isArray(m.bundledVersions) || m.bundledVersions.length > 1000) throw new Error('Invalid bundled file versions.');
+    const versions = new Set<string>();
+    for (const entry of m.bundledVersions) {
+      if (!entry || !/^[0-9a-f-]{36}$/i.test(entry.cloudVersionId) || versions.has(entry.cloudVersionId)
+        || !m.instances.some(item => item.cloudVersionId === entry.cloudVersionId && item.assetId === entry.asset?.id)) throw new Error('Invalid or duplicate bundled file-version binding.');
+      versions.add(entry.cloudVersionId);
+    }
+  }
   return m;
 }
-export function missingAsset(ref: AssetReference): Asset {
+export function missingAsset(ref: AssetReference, cloudVersionId?: string): Asset {
   const geometry = new BoxGeometry(...ref.dimensions.map(n => Math.max(n, .01)) as Vec3);
   geometry.translate(0, ref.dimensions[1] / 2, 0);
   const part = { id: `${ref.id}/missing`, name: 'Missing geometry — reimport original source', vertices: Array.from(geometry.attributes.position.array), indices: Array.from(geometry.index!.array), color: [.7,.25,.2] as Vec3, metadata: { representation: 'Missing geometry placeholder' } };
   geometry.dispose();
-  return { ...ref, schemaVersion: 1, units: 'm', upAxis: 'Y', originOffset: [0,0,0], parts: [part], hierarchy: { id: `${ref.id}/root`, name: ref.name, partIds: [part.id], children: [] }, warnings: ['Geometry unavailable. Reimport the matching source or enable cloud storage.'], ...(ref.projectRevision ? {formProject:{projectId:ref.source.projectId,revision:ref.projectRevision,hardwareIrVersion:ref.source.version?.split(' / ')[0]??'0.2',ir:{},source:'raw_ir' as const}} : {}) };
+  return { ...ref, schemaVersion: 1, units: 'm', upAxis: 'Y', originOffset: [0,0,0], parts: [part], hierarchy: { id: `${ref.id}/root`, name: ref.name, partIds: [part.id], children: [] }, warnings: [cloudVersionId ? `Cloud file version ${cloudVersionId} is unavailable. Retrieve that exact version or reopen the saved revision after restoring Storage access.` : 'Geometry unavailable. Reimport the matching source.'], ...(ref.projectRevision ? {formProject:{projectId:ref.source.projectId,revision:ref.projectRevision,hardwareIrVersion:ref.source.version?.split(' / ')[0]??'0.2',ir:{},source:'raw_ir' as const}} : {}) };
 }
-export function hydrateManifest(manifest: SceneManifest, available: Asset[]): Workspace {
+export function hydrateManifest(manifest: SceneManifest, available: Asset[], availableVersions: ReadonlyMap<string, Asset> = new Map()): Workspace {
   const assets = new Map(available.map(asset => [asset.id, asset]));
   for (const raw of manifest.bundledAssets ?? []) {
     const asset = parseCloudBundle(JSON.stringify({ schemaVersion: 1, asset: raw })).asset;
     assets.set(asset.id, asset);
   }
+  const versions = new Map(availableVersions);
+  for (const entry of manifest.bundledVersions ?? []) {
+    const asset = parseCloudBundle(JSON.stringify({ schemaVersion: 1, asset: entry.asset })).asset;
+    versions.set(entry.cloudVersionId, asset);
+  }
   const items = manifest.instances.map(({ assetId, ...instance }) => {
     const ref = manifest.assets.find(a => a.id === assetId)!;
-    const asset = assets.get(assetId);
+    // A matching source digest or asset ID is not proof of a file version.
+    const candidate = instance.cloudVersionId ? versions.get(instance.cloudVersionId) : assets.get(assetId);
+    const asset = candidate?.id === assetId ? candidate : undefined;
     if (asset && (asset.source.digest !== ref.source.digest || asset.source.version !== ref.source.version || (ref.projectRevision !== undefined && asset.formProject?.revision !== ref.projectRevision))) throw new Error(`Source revision mismatch for ${ref.name}.`);
-    return { ...instance, asset: asset ?? missingAsset(ref), missing: !asset };
+    return { ...instance, asset: asset ?? missingAsset(ref, instance.cloudVersionId), missing: !asset };
   });
   for (const track of manifest.animation.tracks) {
     const item = items.find(i => i.id === track.instanceId)!;
     if (!item.missing && track.partId && !item.asset.parts.some(p => p.id === track.partId)) throw new Error(`Animation component is missing in ${item.name}.`);
   }
   return { room: manifest.room, items, animation: manifest.animation };
+}
+
+/** Compare editable content without authorship metadata or portable geometry. */
+export function sceneContent(value: unknown) {
+  const { format, version, units, upAxis, room, assets, instances, animation } = readManifest(value);
+  return { format, version, units, upAxis, room, assets, instances, animation };
+}
+export function workspaceVersions(workspace: Workspace): VersionedAsset[] {
+  return [...new Map(workspace.items.filter(item => item.cloudVersionId && !item.missing)
+    .map(item => [item.cloudVersionId!, { cloudVersionId: item.cloudVersionId!, asset: item.asset }])).values()];
 }

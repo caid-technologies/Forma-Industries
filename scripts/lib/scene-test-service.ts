@@ -16,6 +16,10 @@ export async function sceneTestService() {
     finish_asset_upload: ['p_id'],
     save_workspace_scene: ['p_id', 'p_name', 'p_document', 'p_expected_revision', 'p_write_id'],
     get_workspace_scene: ['p_id', 'p_revision', 'p_share_token'],
+    list_scene_revisions: ['p_id', 'p_before_revision', 'p_limit'],
+    restore_workspace_scene: ['p_id', 'p_revision', 'p_expected_revision', 'p_write_id'],
+    delete_workspace_scene: ['p_id', 'p_expected_revision'],
+    duplicate_workspace_scene: ['p_source_id', 'p_new_id', 'p_name'],
   };
   let failNextUpload = false;
   const server = createServer(async (req, res) => {
@@ -37,6 +41,12 @@ export async function sceneTestService() {
         const name = url.pathname.split('/').at(-1)!; const args = JSON.parse(body.toString());
         if (!orders[name]) throw new Error(`Unsupported test RPC: ${name}`);
         json(await serialized(() => asUser(owner, () => rpc(name, orders[name].map(key => args[key]))))); return;
+      }
+      if (url.pathname === '/rest/v1/assets' && req.method === 'POST') {
+        const records = JSON.parse(body.toString());
+        for (const row of records) await serialized(() => asUser(owner, () => db.query(`insert into public.assets(owner_id,asset_key,name,source_kind,metadata) values($1,$2,$3,$4,$5)
+          on conflict(owner_id,asset_key) do update set name=excluded.name,source_kind=excluded.source_kind,metadata=excluded.metadata`, [row.owner_id,row.asset_key,row.name,row.source_kind,JSON.stringify(row.metadata)])));
+        json(null); return;
       }
       if (url.pathname === '/rest/v1/scenes' || url.pathname === '/rest/v1/asset_file_versions') {
         const table = url.pathname.split('/').at(-1)!;
@@ -73,7 +83,7 @@ export async function sceneTestService() {
         res.writeHead(200, { 'content-type': 'application/json' }).end(objects.get(path)); return;
       }
       json({ message: 'Unsupported test endpoint' }, 404);
-    } catch (error) { json({ message: (error as Error).message }, 400); }
+    } catch (error) { const e=error as any; json({ message:e.message,code:e.code,details:e.detail,hint:e.hint }, 400); }
   });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;

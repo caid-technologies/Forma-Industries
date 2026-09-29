@@ -12,6 +12,8 @@ In **Save / open scenes**, save the scene and use **Copy private revision link**
 
 Include cloud geometry when saving for another browser/device. Metadata-only scenes retain their layout and animation but show labeled missing-geometry placeholders on another device. The viewer reports unavailable assets, missing revisions, sign-in/access errors, and expired or revoked shares. Supported generated architecture is uploadable after migration `20260929100000_generated_scene_assets.sql`; its synthetic provenance is preserved. Portable JSON remains available without cloud services.
 
+Owners can inspect history, compare revisions, and restore an earlier revision as a new head. These operations are not granted by shared links. See [revision history and restore](scene-history.md).
+
 ## Workspace isolation
 
 A URL opens an isolated workbench. It never restores, edits, or autosaves over the existing IndexedDB draft, OAuth recovery snapshot, asset cache, or active-room pointer. Edits in a link workspace are temporary until explicitly exported or saved to cloud. **Return to saved workspace** opens the original local workspace. Private-link sign-in returns to the requested revision rather than the default room.
@@ -43,7 +45,7 @@ Read a cloud snapshot with `get_workspace_scene(p_id, p_revision, p_share_token)
 
 ## Deployment
 
-1. Apply migrations with the normal Supabase migration process (`supabase db push`). The new migration is `20260929040000_scene_revision_links.sql`.
+1. Apply migrations with the normal Supabase migration process (`supabase db push`). Scene links require `20260929040000_scene_revision_links.sql`; history/restore additionally require `20260929120000_scene_history.sql`. Apply all intervening migrations.
 2. Deploy `supabase functions deploy scene-asset`. Its `verify_jwt = false` setting is intentional: signed-out shared viewers authenticate with a capability checked by the database on every request. The function uses Supabase's built-in server environment variables. Never expose the service-role key in Vite configuration.
 3. Build/deploy the frontend with the existing `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Enable `VITE_CLOUD_STORAGE_ENABLED=true` to upload geometry. Reading an existing link's geometry does not depend on that upload flag.
 4. Allow the application's scene query URLs in the Supabase OAuth redirect allowlist (for example, the trusted application origin followed by `/**`).

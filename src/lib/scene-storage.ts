@@ -1,4 +1,5 @@
 import type { Asset } from './scene';
+import type { VersionedAsset } from './workspace';
 import { validateScene, type MergenceScene } from './scene-manifest';
 import { parseCloudBundle } from './cloud-storage';
 
@@ -6,13 +7,14 @@ const DATABASE='astra-scenes';
 const VERSION=1;
 const TIMEOUT=8000;
 const sceneKey=(scope?:string)=>scope?`active:${scope}`:'active';
+const assetKey=(scope:string|undefined,id:string,version?:string)=>`${scope?scope+':':''}${version?'version:'+version+':':''}${id}`;
 const activeRoomKey=(scope:string)=>`active-room:${scope}`;
 const record=(value:unknown):value is Record<string,unknown>=>Boolean(value)&&typeof value==='object'&&!Array.isArray(value);
 
 export class DraftStorageError extends Error {
   constructor(message:string,readonly scope?:string){super(message);this.name='DraftStorageError';}
 }
-export type StoredScene={scene:MergenceScene;assets:Asset[];missingAssetIds:string[];invalidAssetIds:string[]};
+export type StoredScene={scene:MergenceScene;assets:Asset[];versionedAssets:VersionedAsset[];missingAssetIds:string[];invalidAssetIds:string[]};
 export type DraftBackup={format:'astra.draft-backup';version:1;originalKey:string;createdAt:string;record:unknown;assets:unknown[]};
 
 function openDatabase():Promise<IDBDatabase>{
@@ -60,11 +62,12 @@ async function transact<T>(scope:string|undefined,mode:IDBTransactionMode,work:(
   });
 }
 
-export async function saveScene(scene:MergenceScene,assets:Asset[],scope?:string):Promise<void>{
+export async function saveScene(scene:MergenceScene,assets:Asset[],scope?:string,versions:VersionedAsset[]=[]):Promise<void>{
   const errors=validateScene(scene);if(errors.length)throw new DraftStorageError(`Scene was not saved: ${errors.slice(0,8).join(' ')}`,scope);
   await transact(scope,'readwrite',tx=>{
     tx.objectStore('scenes').put({...scene,id:sceneKey(scope)});
-    for(const asset of assets)tx.objectStore('assets').put(scope?{id:`${scope}:${asset.id}`,scope,asset}:asset);
+    for(const asset of assets)tx.objectStore('assets').put(scope?{id:assetKey(scope,asset.id),scope,asset}:asset);
+    for(const entry of versions)tx.objectStore('assets').put({id:assetKey(scope,entry.asset.id,entry.cloudVersionId),scope,...entry});
     return()=>undefined;
   });
 }
@@ -86,21 +89,21 @@ export async function loadScene(scope?:string):Promise<StoredScene|undefined>{
       const errors=validateScene(raw);if(errors.length)throw new Error(`Saved draft is invalid: ${errors.slice(0,8).join(' ')}`);
       const scene=raw as MergenceScene;
       const instances=scene.workspaceDocument?.instances??scene.instances;
-      const ids=[...new Set(instances.map(instance=>instance.assetId))];
-      result={scene,assets:[],missingAssetIds:[],invalidAssetIds:[]};
+      const bindings=[...new Map(instances.map(instance=>{const version='cloudVersionId' in instance&&typeof instance.cloudVersionId==='string'?instance.cloudVersionId:undefined;return [assetKey(scope,instance.assetId,version),{id:instance.assetId,version}];})).values()];
+      result={scene,assets:[],versionedAssets:[],missingAssetIds:[],invalidAssetIds:[]};
       // Fetch only referenced keys in this account's namespace. Malformed data
       // elsewhere in the cache must not break this user's scene restoration.
-      for(const id of ids){
-        const request=tx.objectStore('assets').get(scope?`${scope}:${id}`:id);
+      for(const {id,version} of bindings){
+        const request=tx.objectStore('assets').get(assetKey(scope,id,version));
         request.onsuccess=guard(()=>{
           const row:unknown=request.result;
           if(row===undefined){result!.missingAssetIds.push(id);return;}
           try{
-            const candidate=scope?(record(row)&&row.scope===scope?row.asset:undefined):row;
+            const candidate=scope||version?(record(row)&&row.scope===scope&&row.cloudVersionId===version?row.asset:undefined):row;
             const asset=parseCloudBundle(JSON.stringify({schemaVersion:1,asset:candidate})).asset;
             const ref=scene.workspaceDocument?.assets.find(ref=>ref.id===id);
             if(asset.id!==id||(ref&&(asset.source.digest!==ref.source.digest||asset.source.version!==ref.source.version||(ref.projectRevision!==undefined&&asset.formProject?.revision!==ref.projectRevision))))throw new Error('Cached source identity mismatch');
-            result!.assets.push(asset);
+            if(version)result!.versionedAssets.push({cloudVersionId:version,asset});else result!.assets.push(asset);
           }catch{
             // Preserve the scene/instance/reference. The workspace hydrator will
             // create a labeled placeholder that can be repaired by reimporting.
@@ -128,7 +131,7 @@ export async function exportStoredDraft(scope?:string):Promise<DraftBackup>{
 }
 
 /** Backup and replace are one transaction; quota/clone failures leave the draft intact. */
-export async function backupAndResetDraft(scope:string|undefined,replacement:MergenceScene,replacementScope:string,replacementAssets:Asset[]=[]):Promise<string>{
+export async function backupAndResetDraft(scope:string|undefined,replacement:MergenceScene,replacementScope:string,replacementAssets:Asset[]=[],versions:VersionedAsset[]=[]):Promise<string>{
   const errors=validateScene(replacement);if(errors.length)throw new Error('The replacement draft is invalid.');
   return transact(scope,'readwrite',(tx,guard)=>{
     const id=`recovery:${replacementScope}:${crypto.randomUUID()}`;
@@ -138,7 +141,8 @@ export async function backupAndResetDraft(scope:string|undefined,replacement:Mer
       tx.objectStore('scenes').put({id,format:'astra.draft-backup',version:1,originalKey:sceneKey(scope),createdAt:new Date().toISOString(),record:saved.result??null,assets:relevantAssets(assets.result,scope)});
       if(sceneKey(scope)!==sceneKey(replacementScope))tx.objectStore('scenes').delete(sceneKey(scope));
       tx.objectStore('scenes').put({...replacement,id:sceneKey(replacementScope)});
-      for(const asset of replacementAssets)tx.objectStore('assets').put({id:`${replacementScope}:${asset.id}`,scope:replacementScope,asset});
+      for(const asset of replacementAssets)tx.objectStore('assets').put({id:assetKey(replacementScope,asset.id),scope:replacementScope,asset});
+      for(const entry of versions)tx.objectStore('assets').put({id:assetKey(replacementScope,entry.asset.id,entry.cloudVersionId),scope:replacementScope,...entry});
       // Asset records are deliberately retained for other instances/scenes.
     });
     saved.onsuccess=finish;assets.onsuccess=finish;

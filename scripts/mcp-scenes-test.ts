@@ -93,7 +93,7 @@ try {
   const storage = new CloudStorage(client, owner); const versions = await storage.list();
   const assets = await Promise.all(versions.map(async version => (await storage.load(version)).asset));
   const doc: any = (await service.sql('select document from scenes where id=$1', [created.scene_id])).rows[0].document;
-  const workspace = hydrateManifest(readManifest(doc), assets); assert(workspace.items.every(item => !item.missing));
+  const workspace = hydrateManifest(readManifest(doc), assets, new Map(versions.map((version, i) => [version.id, assets[i]]))); assert(workspace.items.every(item => !item.missing));
   assert.deepEqual(evaluateWorkspace(workspace.items, workspace.animation, 5)[1].position, fixture.scene.animation.tracks[0].keys.find((key: any) => key.time === 5).position);
   const previousWindow = globalThis.window;
   try {
