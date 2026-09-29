@@ -1,10 +1,27 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync, appendFileSync, lstatSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { callRoomTool, roomTools } from './mcp-rooms.mjs';
 
 const root = resolve(process.env.ASTRA_ROOT || process.cwd());
+// stderr is separate from the MCP protocol. Never log arguments, results, or secrets.
+const trace = (event, name) => {
+  if (process.env.ASTRA_MCP_DEBUG !== '1') return;
+  const line = JSON.stringify({ source: 'astra-mcp', event, tool: tools.some(tool => tool.name === name) ? name : undefined }) + '\n';
+  process.stderr.write(line);
+  // Some clients discard child stderr. Keep a local trace as well, without
+  // allowing diagnostics failures to prevent a tool from running.
+  try {
+    const directory = resolve(root, '.astra');
+    const path = resolve(directory, 'mcp-debug.jsonl');
+    if (existsSync(directory) && lstatSync(directory).isSymbolicLink()) return;
+    mkdirSync(directory, { recursive: true });
+    try { if (lstatSync(path).isSymbolicLink() || !lstatSync(path).isFile()) return; }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    appendFileSync(path, line, { encoding: 'utf8', mode: 0o600 });
+  } catch { process.stderr.write('Astra MCP could not write its local diagnostic trace.\n'); }
+};
 const json = path => JSON.parse(readFileSync(path, 'utf8'));
 const localPath = value => {
   const candidate = resolve(root, value || '.astra/feedback/latest.json');
@@ -68,8 +85,17 @@ async function handle(request) {
   if (request.method === 'ping') return response(request.id, {});
   if (request.method === 'tools/list') return response(request.id, { tools });
   if (request.method === 'tools/call') {
-    try { return response(request.id, textResult(callTool(request.params?.name, request.params?.arguments))); }
-    catch (error) { return response(request.id, { content: [{ type: 'text', text: error.message }], isError: true }); }
+    const name = request.params?.name;
+    trace('tool-call-received', name);
+    try {
+      const result = textResult(callTool(name, request.params?.arguments));
+      trace('tool-call-succeeded', name);
+      return response(request.id, result);
+    }
+    catch (error) {
+      trace('tool-call-failed', name);
+      return response(request.id, { content: [{ type: 'text', text: error instanceof Error ? error.message : 'Astra tool failed.' }], isError: true });
+    }
   }
   return errorResponse(request.id, `Unsupported MCP method: ${request.method}`);
 }
