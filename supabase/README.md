@@ -58,3 +58,7 @@ npx supabase config push --workdir supabase/hosted-auth --project-ref mrhxfmtofv
 ```
 
 `npm run test:auth` exercises the real Supabase client with mocked provider/token responses: PKCE, login errors, session persistence, logout, workspace restoration, and mobile layout. It does not prove the external GitHub credentials or live authorization work. A real authorization round trip is still required after enabling the provider.
+
+## Scene revision links
+
+See [scene links](../docs/scene-links.md) for immutable revision URLs, owner-only access, expiring/revocable sharing, the `scene-asset` Edge Function, migration/deployment steps, and deterministic tests.

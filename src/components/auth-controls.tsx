@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import { readAuthError, supabase } from '../lib/supabase';
 import './auth-controls.css';
 
-export function AuthControls({ beforeSignIn }: { beforeSignIn: () => Promise<void> }) {
+export function AuthControls({ beforeSignIn, returnTo }: { beforeSignIn: () => Promise<void>; returnTo?: string }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(Boolean(supabase));
   const [busy, setBusy] = useState(false);
@@ -38,7 +38,7 @@ export function AuthControls({ beforeSignIn }: { beforeSignIn: () => Promise<voi
       const settings = await response.json();
       if (!settings.external?.github) throw new Error('GitHub login is not enabled yet. Enable GitHub in Supabase Authentication → Providers.');
       const { data, error: authError } = await supabase.auth.signInWithOAuth({
-        provider: 'github', options: { redirectTo: window.location.origin, skipBrowserRedirect: true, scopes: 'read:user user:email' },
+        provider: 'github', options: { redirectTo: returnTo ?? window.location.origin, skipBrowserRedirect: true, scopes: 'read:user user:email' },
       });
       if (authError) throw authError;
       if (!data.url) throw new Error('GitHub did not provide a sign-in URL.');

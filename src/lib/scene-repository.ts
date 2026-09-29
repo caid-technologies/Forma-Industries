@@ -2,11 +2,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { CloudStorage, scrubCloudData } from './cloud-storage';
 import { hydrateManifest, makeManifest, readManifest, type Workspace } from './workspace';
 import type { Asset } from './scene';
+import { sceneURLs } from './scene-links';
 
-export type SavedScene = { id: string; owner_id: string; name: string; revision: number; updated_at: string; document?: unknown };
+export type SavedScene = { id: string; owner_id: string; name: string; revision: number; updated_at: string; document?: unknown; head_url?: string; revision_url?: string };
 export type AssetRow = { id: string; asset_key: string; name: string; source_kind: string; metadata: { dimensions: Asset['dimensions']; source: Asset['source'] } };
 export class SceneRepository {
-  constructor(readonly client: SupabaseClient, readonly owner: string, readonly storageEnabled: boolean) {}
+  constructor(readonly client: SupabaseClient, readonly owner: string, readonly storageEnabled: boolean, readonly baseURL = typeof window === 'undefined' ? undefined : window.location.origin) {}
   async list(): Promise<SavedScene[]> {
     const {data,error}=await this.client.from('scenes').select('id,owner_id,name,revision,updated_at').eq('owner_id',this.owner).order('updated_at',{ascending:false}).limit(200);
     if(error)throw new Error(error.message);return data;
@@ -47,7 +48,8 @@ export class SceneRepository {
     progress('Saving scene and asset references…');
     const {data,error}=await this.client.rpc('save_workspace_scene',{p_id:id,p_name:name.trim(),p_document:document,p_expected_revision:revision,p_write_id:crypto.randomUUID()});
     if(error)throw new Error(error.message);
-    return{scene:(Array.isArray(data)?data[0]:data) as SavedScene,workspace:copy};
+    const scene = (Array.isArray(data)?data[0]:data) as SavedScene;
+    return{scene:{...scene,...sceneURLs(scene.id,scene.revision,this.baseURL)},workspace:copy};
   }
   async open(id:string,localAssets:Asset[],progress:(text:string)=>void):Promise<{scene:SavedScene;workspace:Workspace}> {
     const {data,error}=await this.client.from('scenes').select('*').eq('id',id).eq('owner_id',this.owner).single();
@@ -68,9 +70,18 @@ export class SceneRepository {
     progress(notices.length?`Some geometry is unavailable: ${notices.join(', ')}. Reimport matching sources.`:'Scene loaded.');
     return{scene:data,workspace};
   }
+  async share(scene: SavedScene): Promise<{url:string;expires_at:string}> {
+    const {data,error}=await this.client.rpc('create_scene_share',{p_id:scene.id,p_revision:scene.revision});
+    if(error)throw new Error(error.message);
+    return {...data,url:this.baseURL?new URL(data.url,this.baseURL).href:data.url};
+  }
+  async revokeShares(id:string) {
+    const {error}=await this.client.rpc('revoke_scene_shares',{p_id:id});
+    if(error)throw new Error(error.message);
+  }
   async remove(scene:SavedScene){const{error}=await this.client.rpc('delete_workspace_scene',{p_id:scene.id,p_expected_revision:scene.revision});if(error)throw new Error(error.message);}
   async duplicate(scene:SavedScene,name:string):Promise<SavedScene>{
     const {data,error}=await this.client.rpc('duplicate_workspace_scene',{p_source_id:scene.id,p_new_id:crypto.randomUUID(),p_name:name.trim()});
-    if(error)throw new Error(error.message);return(Array.isArray(data)?data[0]:data) as SavedScene;
+    if(error)throw new Error(error.message);const result=(Array.isArray(data)?data[0]:data) as SavedScene;return {...result,...sceneURLs(result.id,result.revision,this.baseURL)};
   }
 }
