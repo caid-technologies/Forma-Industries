@@ -88,6 +88,8 @@ visible timeline control. `ASTRA_CHROME_PATH` can select an installed Chromium.
 Set `FORM_IMPORT_EVIDENCE_DIR` to retain screenshots and exported scenes. CI uploads
 these as `form-import-browser-evidence`.
 
-Folder-root-relative resolution with duplicate basenames and strict digest syntax
-remain tracked by #20. These tests establish existing exact-path, basename,
-integrity and failure behavior without claiming that separate issue is complete.
+The browser suite also selects a real project folder with duplicate STEP basenames
+in separate directories, checks project-relative resolution, and verifies malformed
+hash, checksum mismatch, ambiguous loose-file and missing-sibling recovery. The
+focused `test:cad` suite covers nested/multiple project roots, optional and strict
+64-character SHA-256 declarations, and inaccessible path references.

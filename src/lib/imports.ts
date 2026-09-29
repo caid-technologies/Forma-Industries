@@ -2,6 +2,31 @@ import { cadFileReference, importForm, readFormDocument } from './form';
 import { checkFile, digestBytes, type Asset } from './scene';
 import { convertStep, stepToAsset, type StepOptions, type StepResult } from './step';
 
+// References address selected files, never URLs or paths on the author's machine.
+// Do not turn an inaccessible path into a basename match.
+function localPath(value: string | undefined): string | undefined {
+  if (!value) return;
+  const path = value.replace(/\\/g, '/');
+  if (/^(?:\/|[a-z][a-z\d+.-]*:)/i.test(path) || /[\x00-\x1f]/.test(path)) return;
+  const segments = path.split('/').filter(part => part && part !== '.');
+  if (!segments.length || segments.includes('..')) return;
+  return segments.join('/');
+}
+
+function matchCAD(project: File, reference: string | undefined, files: File[]): File | undefined {
+  const path = localPath(reference);
+  if (!path) return;
+  const directory = localPath(project.webkitRelativePath)?.split('/').slice(0, -1).join('/');
+  const target = directory ? `${directory}/${path}` : path;
+  const exact = files.filter(file => localPath(file.webkitRelativePath || file.name) === target);
+  // Folder paths are authoritative. An absent sibling must not silently bind to
+  // another directory/project. Loose files still support the ordinary file picker.
+  const fallback = files.filter(file => (!directory || !file.webkitRelativePath) && file.name === path.split('/').pop());
+  const candidates = exact.length ? exact : fallback;
+  if (candidates.length > 1) throw new Error(`Multiple files match ${reference}. Select only the intended CAD artifact.`);
+  return candidates[0];
+}
+
 // Cache final assets, not the much larger source + intermediate CAD representations.
 export class ImportService {
   private cache = new Map<string, Asset>();
@@ -41,25 +66,14 @@ export class ImportService {
       const digest = await digestBytes(bytes);
       const doc = readFormDocument(input, file.name);
       const reference = cadFileReference(doc.cad);
-      const normalized = reference?.replace(/\\/g, '/').split('?')[0];
-      const isRemoteReference = normalized ? /^(?:[a-z]+:)?\/\//i.test(normalized) : false;
       const cadInputs = inputs.filter(f => /\.(step|stp)$/i.test(f.name));
-      const normalizedReference = normalized?.replace(/^\.\//, '');
-      const exactCandidates = normalizedReference && !isRemoteReference ? cadInputs.filter(f => {
-        const path = (f.webkitRelativePath || f.name).replace(/\\/g, '/').replace(/^\.\//, '');
-        return path === normalizedReference;
-      }) : [];
-      const basename = normalizedReference?.split('/').pop();
-      const basenameCandidates = basename && !isRemoteReference ? cadInputs.filter(f => f.name === basename) : [];
-      const candidates = exactCandidates.length ? exactCandidates : basenameCandidates;
-      if (candidates.length > 1) throw new Error(`Multiple files match ${normalized}. Select only the intended CAD artifact.`);
-      if (candidates.length === 1) {
-        const cad = candidates[0];
-        const exactDeclarations = doc.artifacts.filter(a => String(a.path).replace(/\\/g, '/').replace(/^\.\//, '') === normalizedReference);
-        const declarations = exactDeclarations.length ? exactDeclarations : doc.artifacts.filter(a => String(a.path).replace(/\\/g, '/').split('/').pop() === cad.name);
+      const cad = matchCAD(file, reference, cadInputs);
+      if (cad) {
+        const exactDeclarations = doc.artifacts.filter(a => localPath(a.path) === localPath(reference));
+        const declarations = exactDeclarations.length ? exactDeclarations : doc.artifacts.filter(a => localPath(a.path)?.split('/').pop() === cad.name);
         if (declarations.length > 1) throw new Error(`Ambiguous artifact declarations for ${cad.name}.`);
         const declaration = declarations[0];
-        if (declaration?.sha256 && String(declaration.sha256).toLowerCase() !== await digestBytes(await cad.arrayBuffer())) {
+        if (declaration?.sha256 !== undefined && declaration.sha256.toLowerCase() !== await digestBytes(await cad.arrayBuffer())) {
           throw new Error(`Integrity check failed for ${cad.name}: bytes do not match the Form manifest SHA-256.`);
         }
         // Form mechanical data is always Z-up; standalone STEP options do not change that contract.
