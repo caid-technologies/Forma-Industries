@@ -2,9 +2,11 @@
 
 Mergence's local stdio MCP server lets an external agent discover assets, create a scene, read it, and save an edit as a new revision. The workbench runs locally; saved scenes and geometry use your configured Supabase backend. No in-app chat, provider SDK, or live LLM is required.
 
+For a clean-checkout walkthrough, copyable Codex/OpenCode setup, cross-client replay, and pinned-revision checks, see [cross-agent workflows](mcp-agent-workflows.md).
+
 ## Setup
 
-1. Run `npm ci` in this checkout. Apply all Supabase migrations using your normal migration process (`npx supabase db push`), including `20260929100000_generated_scene_assets.sql`. Private Storage must be enabled for geometry.
+1. Run `npm ci` in this checkout. Apply all Supabase migrations using your normal migration process (`npx supabase db push`), through `20260929120000_scene_history.sql`, including the generated-assets migration. Private Storage must be enabled for geometry.
 2. Configure `.env` with your **public** Supabase settings and explicitly enable scene tools:
 
    ```dotenv
@@ -23,9 +25,9 @@ Mergence's local stdio MCP server lets an external agent discover assets, create
      "mcpServers": {
        "astra": {
          "command": "node",
-         "args": ["/absolute/path/Form-Industries/server/astra-mcp.mjs"],
+         "args": ["/absolute/path/OpenIndustries/server/astra-mcp.mjs"],
          "env": {
-           "ASTRA_ROOT": "/absolute/path/Form-Industries",
+           "ASTRA_ROOT": "/absolute/path/OpenIndustries",
            "ASTRA_SCENE_TOOLS_ENABLED": "true"
          }
        }
@@ -33,7 +35,7 @@ Mergence's local stdio MCP server lets an external agent discover assets, create
    }
    ```
 
-Use your checkout's absolute path (on Windows, forward slashes such as `C:/projects/Form-Industries` work). Restart the MCP server after configuration changes. Hosts limited to remote MCP need a separate trusted transport adapter; this repository supplies only local stdio. Connect any compatible agent through that host; Mergence does not contact an LLM.
+Use your checkout's absolute path (on Windows, forward slashes such as `C:/projects/OpenIndustries` work). Restart the MCP server after configuration changes. Hosts limited to remote MCP need a separate trusted transport adapter; this repository supplies only local stdio. Connect any compatible agent through that host; Mergence does not contact an LLM.
 
 ## Tools and schemas
 
