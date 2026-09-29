@@ -7,6 +7,7 @@
     "astra": "cli/astra.mjs"
   },
   "scripts": {
+    "test:room-transitions": "node --import tsx scripts/room-transitions-test.ts",
     "test:animation": "node --import tsx scripts/animation-test.ts",
     "test:animation-browser": "node --import tsx scripts/animation-browser-test.ts",
     "test:camera-depth": "node --import tsx scripts/camera-depth-test.ts",

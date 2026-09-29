@@ -21,6 +21,16 @@ Positions are meters with Y up. Instance rotations are XYZ Euler degrees. Keyfra
 
 Tracks target stable instance IDs and optional source part IDs. Deleting an instance removes its tracks. Missing/duplicate targets, invalid keyframes, unsupported versions, and non-finite transforms are rejected during scene import. GIF metadata records exact sampled frame times and evaluated transforms; GIF's 10 ms tick still determines playback timing.
 
+## Switching rooms safely
+
+Sidebar **New room**, saved-room open/duplicate, imported scene JSON, and generated layouts share the same transition flow. Unsaved changes offer **Save and continue**, **Discard and continue**, or **Cancel**. Signed-out users save to a device draft; signed-in users save the named cloud scene. Save/load failures keep the current editor and expose retry or cancel. A successful save continues directly without a second discard prompt.
+
+Before a normal switch, pending device writes are flushed. New local/imported/generated/copy rooms receive a fresh room ID together with their contents; cloud rooms use their saved ID. Device writes are ordered per account and only the current room may update its active-room pointer. Explicit discard can proceed when local storage is unavailable. Corrupt drafts stay protected until recovery or explicit discard.
+
+Late opens, saves, lists, file imports, Form generation, and cloud-asset downloads cannot update a different room or account. Cancelling a cloud action ignores its late UI result; a request already committed by the server may still appear in that account's saved scenes. Account changes retain the previous account's draft and restore the destination account's own draft. Fullscreen moves the existing workspace controls without remounting them, preserving names, dialogs, and operation guards.
+
+Run `npm run test:room-transitions` for the isolated browser/SQL regression suite. It covers room identity, independent timelines, save/open/storage failures, conflicts, retry/cancel/discard, delayed results, missing geometry, duplicate/delete independence, and keyboard/mobile/fullscreen behavior.
+
 ## Postgres and storage
 
 `SceneRepository` uses a session-bound authenticated Supabase client. Core metadata operations do not depend on the optional storage flag:

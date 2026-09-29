@@ -13,6 +13,7 @@ export function CloudLibrary(props: { entries: LibraryEntry[]; addAsset: (asset:
 function EnabledCloudLibrary({ entries, addAsset, roomOperation = 0 }: { entries: LibraryEntry[]; addAsset: (asset: Asset, cloudVersionId?: string) => void; roomOperation?: number }) {
   const [owner, setOwner] = useState<string | null>(null);
   const ownerRef = useRef<string | null>(null);
+  const roomRef=useRef(roomOperation);roomRef.current=roomOperation;
   const epoch = useRef(0);
   const mounted = useRef(true);
   const lock = useRef(false);
@@ -84,7 +85,7 @@ function EnabledCloudLibrary({ entries, addAsset, roomOperation = 0 }: { entries
             setMessage('Downloading and verifying geometry…');
             const entry = await storage.load(version);
             if (!isCurrent(token)) return;
-            if(roomAtStart!==roomOperation) throw new Error('Room changed while loading this asset. Open Cloud files again to add it to the active room.');
+            if(roomAtStart!==roomRef.current) throw new Error('Room changed while loading this asset. Open Cloud files again to add it to the active room.');
             addAsset(entry.asset, version.id);
             setDownload(entry.preview ? { blob: entry.preview, name: `${version.id}-preview.gif` } : undefined);
             setMessage('Verified cloud asset loaded into the room.');

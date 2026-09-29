@@ -43,6 +43,15 @@ jobs:
           name: animation-browser-evidence
           path: ${{ runner.temp }}/animation-evidence
           if-no-files-found: ignore
+      - run: npm run test:room-transitions
+        env:
+          ROOM_EVIDENCE_DIR: ${{ runner.temp }}/room-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: room-transition-browser-evidence
+          path: ${{ runner.temp }}/room-evidence
+          if-no-files-found: ignore
       - run: npm run test:portable-scenes-browser
       - run: npm run test:mcp-scenes-browser
       - run: npm run test:scene-history-browser
