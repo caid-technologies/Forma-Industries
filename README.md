@@ -1,195 +1,162 @@
 # Astra Industries
 
-A hackathon project extending [Forma OSS](https://github.com/caid-technologies/Forma-OSS) by CAID Technologies into room-scale spatial design.
+**Arrange hardware in a 3D space, animate how it moves, and share the layout for review.**
 
-**Live app:** https://astra-industries.vercel.app
+Astra Industries is a browser-based spatial workbench for planning fabrication shops, manufacturing spaces, and laboratories. Import equipment from [Forma OSS](https://github.com/caid-technologies/Forma-OSS) or a STEP CAD file, place it in a room at real-world scale, and preview a workflow before moving physical equipment.
 
-See the [persistent workspace guide](docs/workspace.md) for cloud saves, instance transforms, keyframe animation, and the complete import → arrange → save → animate → export workflow.
+This is a hackathon project by CAID Technologies. **Forma-Industries is the repository name; Astra Industries is the application name.**
 
-Optional private geometry/GIF storage: [cloud storage setup and lifecycle](docs/cloud-storage.md). Enable with `VITE_CLOUD_STORAGE_ENABLED=true` after applying its migrations; the device library and core Auth/Postgres work with it disabled.
+[Open the app](https://astra-industries.vercel.app) · [Try the cleanroom demo](https://astra-industries.vercel.app/?scene=cleanroom) · [Run locally](#run-locally) · [Documentation](#documentation)
 
-## Vision
+## Why use it?
 
-Design set pieces, workstations, and equipment layouts for fabrication shops, manufacturing spaces, and laboratories. Build hardware projects with Forma, import existing Forma projects or plain STEP files, place them in a 3D room, and animate how the space works.
+A hardware model describes an individual piece of equipment. Planning a workspace also means deciding where that equipment goes, what sits around it, and how people or materials move through the room.
 
-## Planned workflow
+Astra brings those models into one editable scene. A maker can compare workbench arrangements, a manufacturing team can illustrate material flow, and a lab team can review an equipment layout or sampling route. The output is a room layout, an animation, and files that others can reopen or review.
 
-1. Build a project using Forma OSS, or bring an existing Forma project or STEP model.
-2. Import the design as a reusable scene asset with consistent physical units.
-3. Configure a room and arrange multiple assets at real-world scale.
-4. Preview object motion and assembly or workflow sequences with a simple animation timeline.
-5. Save and reopen the room layout for further iteration.
+## Try it without installing anything
 
-## Initial scope
+Open the [cleanroom demo](https://astra-industries.vercel.app/?scene=cleanroom). It includes four rooms, stainless workbenches, and a Forma-authored swab-sampling robot. The animation visits Rooms A and C and skips occupied Room B, showing how equipment, space, and a schedule fit together. The demo opens without replacing your saved workspace.
 
-- Forma OSS integration for project creation and handoff.
-- Forma project import, including available mechanical geometry and metadata.
-- Standalone .step and .stp import and display.
-- Interactive 3D room viewer and layout tools.
-- Basic keyframe animation and playback.
-- Scene persistence and representative fabrication, manufacturing, and lab demos.
+To make your own layout, open the [main workbench](https://astra-industries.vercel.app):
 
-## Upstream integration
+1. Choose **Space brief / local demo**, select a maker, manufacturing, or biofab space, and click **Build space layout**. This creates a preset layout with labeled equipment placeholders and a material-flow animation.
+2. Or choose **Import project** / **Drop files or browse** to open your own Forma JSON, STEP model, or saved Astra scene.
+3. Adjust the room and equipment, then use **Animate**, **GIF studio**, or **Export scene JSON** to inspect and share the result.
 
-Forma provides hardware generation, versioned project objects, and mechanical layouts. Its reusable Python distribution is caid-forma-core (import package: forma_core). Integration details and supported project versions will be established in the implementation issues.
+You can import, edit, animate, and export locally without signing in. GitHub sign-in is used for cloud features.
 
-Upstream Forma OSS is licensed under MPL-2.0; preserve applicable notices and license obligations when reusing upstream code.
+## What you can do today
 
-## Status
+| Capability | What it does |
+| --- | --- |
+| Import equipment | Open Forma project JSON and `.step` / `.stp` CAD files, with geometry normalized to meters. |
+| Arrange a room | Set width, depth, and height; move, rotate, rename, duplicate, hide, or remove equipment instances; undo and redo edits. |
+| Inspect a design | View available components, bill of materials (BOM), validation findings, and source/project metadata. |
+| Author motion | Add position and rotation keyframes for equipment or components, then play or scrub the timeline. |
+| Export a visual review | Render GIFs of a room, a floor section, or a selected asset, with companion JSON recording spatial and animation context. |
+| Reuse equipment | Save geometry and previews in a device asset library and add them to another layout. |
+| Save and reopen | Export portable scene JSON, restore local drafts, or explicitly save named cloud scenes after signing in. |
+| Work with agents locally | Use optional Forma/OpenCode/MCP workflows to create equipment, create rooms, and hand animation feedback back to Forma. |
 
-The workbench supports Forma/STEP imports, stable editable instances, room dimensions, component inspection, keyframe animations, shared-pose GIF exports, portable scene JSON, authenticated Postgres scene saves, and optional private geometry/GIF storage. Forma generation can run separately; its local CLI bridge remains available for development.
+## How Forma and Astra work together
+
+**Forma authors the equipment; Astra places and reviews it in a space.** Forma OSS provides hardware generation, validation, and compiled project data. Astra imports that output and adds room layout, instance placement, animation, and visual review.
+
+1. **Create or bring equipment.** Author and compile a project in Forma, or use an existing STEP file from another CAD tool.
+2. **Import it into Astra.** Select the Forma JSON and any referenced STEP files together. Standalone STEP files also work.
+3. **Arrange and animate.** Place equipment in the room and add keyframes to illustrate its motion or a workflow.
+4. **Save or share.** Export a portable scene, render a GIF plus review metadata, or save a cloud scene.
+5. **Iterate when needed.** In the optional local agent workflow, send animation feedback to Forma, review the revised design, and reimport its compiled artifact.
+
+An **asset** is reusable imported equipment geometry. An **instance** is one placed copy of that asset. A **scene** combines the room, instances, and animation. Multiple instances can share one asset while keeping independent positions and motion.
+
+See the [workspace guide](docs/workspace.md) for the full editing workflow and the [Forma handoff contract](docs/forma-handoff.md) for supported project formats.
+
+## Saving your work
+
+| Option | Where it lives | Best for |
+| --- | --- | --- |
+| Automatic local draft | The current browser/device | Returning to work after a refresh. This is separate from a cloud save. |
+| Device asset library | The current browser/device | Reusing equipment and its GIF previews across layouts. |
+| Portable scene JSON | A file you export | Reopening or transferring a scene with its geometry and animation, without cloud services. |
+| Cloud scene | Your signed-in Supabase account | Saving named scenes across devices. Enable **Include cloud geometry** when saving if the other device needs the models. |
+| Cloud files | Optional private Supabase Storage | Explicitly uploading geometry bundles, GIF previews, and supported source attachments. |
+
+Browser storage is subject to quota and eviction, so export a scene file for a portable copy. Signing in does not automatically upload your imported files. A metadata-only cloud scene may show missing-geometry placeholders on another device until you provide the source assets. See [cloud storage setup](docs/cloud-storage.md) for enabling geometry transfers.
 
 ## Run locally
 
-Requires Node 22 and Python 3.11+.
+### Browser workbench
 
-```powershell
-npm install
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements-forma.txt
+Install **Node.js 22** and Git, then run:
+
+```bash
+git clone https://github.com/caid-technologies/Forma-Industries.git
+cd Forma-Industries
+npm ci
+npm run dev
+```
+
+Open <http://127.0.0.1:5173>. The development command starts both Vite and the local API server. To view the bundled example, open <http://127.0.0.1:5173/?scene=cleanroom>.
+
+Python, provider API keys, and Supabase configuration are optional for local imports, room editing, animation, the device library, and exports.
+
+To serve a production build locally:
+
+```bash
 npm run build
 npm start
 ```
 
-Open http://127.0.0.1:8787. For development use `npm run dev` and http://127.0.0.1:5173.
+Open <http://127.0.0.1:8787>.
 
-On macOS/Linux use `.venv/bin/python` for pip installation. Forma is installed through `caid-forma-core==0.3.5`; no Forma source checkout is required. The distribution provides the `forma-oss` and `forma-core` commands. Astra invokes `python -m forma_core` from this environment.
+### Optional services
 
-Use **Build with Forma → Deterministic demo** to verify the full creation/import flow without provider credentials. For live generation, configure the appropriate provider environment variables in `.env` (see `.env.example`) and enter its provider/model in the UI. Live provider calls have not yet been verified in this project.
+Copy [`.env.example`](.env.example) to `.env` when you need configuration. Restart development or rebuild after changing browser variables.
 
-### Optional Forma MCP demo
+| Feature | Setup |
+| --- | --- |
+| Local **Build with Forma** | Install Python 3.11+ and `requirements-forma.txt` into `.venv`. Follow the [local generation guide](docs/development.md#local-forma-generation), then try **Deterministic demo** without provider credentials. |
+| Live Forma generation | Configure server-side provider credentials in `.env` and select a provider/model in the UI. Live provider calls have not yet been verified in this project. |
+| GitHub sign-in and cloud scenes | Configure Supabase Auth/Postgres and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. See [Auth/database setup](supabase/README.md). |
+| Private cloud geometry and GIFs | Apply the storage migrations and set `VITE_CLOUD_STORAGE_ENABLED=true`. See the [storage guide](docs/cloud-storage.md). |
+| Browser-only deployment | Set `VITE_FORMA_GENERATION_ENABLED=false`. Generate equipment separately and import it; the hosted frontend does not run the Node/Python bridge. |
+| Local agents and CLI | See [OpenCode/MCP setup](docs/development.md#optional-forma-mcp-demo), [room creation through MCP](docs/development.md#create-rooms-through-mcp), and the [Astra CLI](docs/development.md#astra-cli). |
 
-The repository includes a project-local OpenCode configuration for the Forma OSS MCP server. It is local-only and does not affect the Vercel build or browser bundle. Astra's file import and existing local generation bridge continue to work when Forma MCP is not installed or running.
+Only public Supabase browser configuration belongs in `VITE_` variables. Provider credentials and Supabase service-role keys must stay out of the browser bundle.
 
-In a second checkout, start Forma OSS using its documented setup:
+## Technology and repository map
 
-```powershell
-py -3 .\scripts\development\setup-opencode.py --root . --workspace "$HOME\forma-workspace" --install-cli
-.\scripts\development\dev.ps1
+| Part | Technology | Location |
+| --- | --- | --- |
+| Browser interface | React 19, TypeScript, Vite | [`src/main.tsx`](src/main.tsx), [`src/components/`](src/components/) |
+| 3D workspace and animation | Three.js | [`src/lib/`](src/lib/), [`src/components/workspace-viewer.tsx`](src/components/workspace-viewer.tsx) |
+| STEP conversion | `occt-import-js` / OpenCascade WebAssembly in a worker | [`src/lib/step.ts`](src/lib/step.ts), [`public/step-worker.js`](public/step-worker.js) |
+| GIF export | `gifenc`, rendered in the browser | [`src/lib/gif.ts`](src/lib/gif.ts) |
+| Cloud accounts and persistence | Supabase Auth, Postgres, optional private Storage | [`supabase/`](supabase/), [`src/lib/scene-repository.ts`](src/lib/scene-repository.ts) |
+| Local Forma bridge and agent tools | Node.js/Express, Python `caid-forma-core==0.3.5`, MCP | [`server/`](server/), [`opencode.json`](opencode.json) |
+| Room transfer CLI | Node.js | [`cli/astra.mjs`](cli/astra.mjs) |
+| Verification and examples | Model tests, browser smoke tests, bundled scenes | [`scripts/`](scripts/), [`public/examples/cleanroom/`](public/examples/cleanroom/) |
+
+## Current scope and limitations
+
+Astra is a working prototype for spatial planning and visual review. Keep these boundaries in mind when evaluating the demo:
+
+- **Animation is visual.** Keyframes illustrate movement; they do not provide physics simulation, collision guarantees, electrical revalidation, or manufacturing approval.
+- **Space briefs use presets and planning envelopes.** These placeholders represent equipment positions and sizes. Replace them with Forma-authored projects or CAD for detailed review.
+- **The cleanroom route is illustrative.** Its access schedule is example data, and the mostly fused robot CAD uses whole-robot approach/retract motion to approximate sampling. See the [example notes](public/examples/cleanroom/README.md).
+- **Imports have practical limits.** Equipment imports are capped at 25 MiB per file, 75 MiB per batch, and 2 million vertices per asset. Large assemblies and STEP variants still need broader validation.
+- **Companion CAD must be selected explicitly.** Astra does not automatically fetch remote CAD URLs or server-local paths. Missing CAD uses labeled envelopes when the project provides them, or reports an error.
+- **Agent integration is optional and local.** The deployed frontend supports imports and visual review; the Forma generation and feedback bridge runs separately. Design changes go through an explicit review and reimport loop.
+
+## Development checks
+
+For the TypeScript build and model/contract checks:
+
+```bash
+npm run build
+npm run test:cad
+npm run test:scene
+npm run test:workspace
+npm run test:mcp
 ```
 
-The Forma backend must be available at `http://127.0.0.1:8000/mcp`. Then, from this Astra checkout:
+For browser smoke tests, run `npm start` in another terminal after building, then run `npm test`, `npm run test:gif`, or `npm run test:fullscreen`. These need Chrome. The main `npm test` suite also needs the Python Forma installation and network access for a STEP fixture; the GIF suite does not need those two dependencies. Screenshots go to `test-results/`.
 
-```powershell
-opencode mcp list
-opencode
-```
+Live cloud tests need a dedicated Supabase test project and test-only credentials; follow the [workspace](docs/workspace.md#verification) and [storage](docs/cloud-storage.md#verification) guides.
 
-Use the `/forma-demo` command in OpenCode. It compiles a validated project to `demo/forma-project.json`; import that file into Astra with **Import project**. The generated `demo/` directory is ignored by Git. Restart OpenCode after changing `opencode.json` because project configuration is loaded at startup.
+## Documentation
 
-OpenCode now connects to both local servers: Forma provides equipment authoring and validation, while Astra exposes room creation, animation feedback, compiled-artifact handoff, and space-brief tools. Verify both with `opencode mcp list` before starting the demo.
-
-### Create rooms through MCP
-
-Ask your connected agent: **“Create a room called Maker lab, 9 meters wide, 7 meters deep, and 3.2 meters high.”** The agent can call:
-
-```json
-{"name":"astra.create_room","arguments":{"name":"Maker lab","width":9,"depth":7,"height":3.2}}
-```
-
-This creates an empty, portable `astra.scene` v1 document under `.astra/rooms/<id>.json` and returns its ID, path, and document. Each dimension must be 1–100 meters; the room vector uses **width, depth, height**. Each call creates a new room, even when names match, without overwriting an existing room.
-
-- `astra.list_rooms` lists rooms created by this MCP checkout.
-- `astra.read_room` takes an `id` and returns the saved scene document.
-
-Open the returned JSON through **Drop files or browse** in the workbench, then import equipment and arrange the room. Creating a room does not replace the active browser workspace. These are local files; to save across devices, sign in and save from the workbench, or use `astra rooms import <path> --name "Maker lab"` after CLI login. The MCP server runs with the local user's filesystem access and does not expose a remote, shared-user endpoint. `astra.write_space_brief` remains available for the preset layout planner.
-
-Run `npm run test:mcp` to verify the MCP protocol, room persistence, and workbench manifest compatibility.
-
-If the MCP server is unavailable, use the deterministic Forma demo or import an existing Forma JSON/STEP project as usual.
-
-### Build a space for the demo
-
-Use **Space brief / local demo** to describe the environment you want to organize, for example a biofab, small manufacturing plant, or DIY maker space. Astra creates the room dimensions, work zones, equipment positions, and a simple material-flow animation locally. These are explicitly marked planning envelopes, not fabricated equipment: Forma OSS remains responsible for authoring the real equipment artifacts. Import Forma-authored projects over the envelopes when they are ready.
-
-### Animation feedback loop
-
-Render **Authored timeline animation** in GIF studio, enter feedback such as a clearance or motion change, and choose **Send feedback to Forma**. Astra saves a scrubbed review package to `.astra/feedback/latest.json`; it contains the room manifest, sampled frame poses, animation tracks, and the instruction, but not credentials or geometry secrets.
-
-In OpenCode, run `/forma-feedback`. It reads the review, updates the Forma project through `forma.opencode.update_project`, and writes the revised compiled manifest back to `demo/forma-project.json`. Reimport that manifest into Astra and render the animation again. This is intentionally a human-reviewed loop; Astra never silently changes electrical or mechanical design data.
-
-### Astra CLI
-
-Install the local CLI from this checkout:
-
-```powershell
-npm install
-npm link
-astra auth login
-```
-
-`astra auth login` opens GitHub and stores the Supabase session in the user's Astra CLI config. Add `http://127.0.0.1:54331/callback` to the Supabase Auth redirect allowlist for the deployed Supabase project, or set `ASTRA_CLI_REDIRECT_URL` to an allowlisted callback. The CLI uses the same Astra account as the browser.
-
-```powershell
-astra rooms list
-astra rooms validate .\astra-scene.json
-astra rooms import .\astra-scene.json --name "Lab demo"
-astra rooms export <room-id> .\astra-scene.json
-astra auth logout
-```
-
-The browser workbench remains the local room editor and can import/export portable scene JSON without signing in. To view a local room, choose **Drop files or browse** and open its `.astra/rooms/<id>.json` scene. The CLI transfers those manifests to and from cloud; binary geometry is not uploaded by the CLI and can be attached from Astra when cloud storage is enabled.
-
-Open `/?scene=cleanroom` to load the bundled cleanroom POC example from `public/examples/cleanroom/cleanroom-suite.json`. It shows four 20×20 ft rooms, four imported stainless workbenches, and the Forma swab-sampling robot. The personnel doors are 1.2 m wide so the 0.995 m robot envelope can pass in this POC. The schedule sends it into Room A for two samples, skips occupied Room B, then enters Room C for two samples when its access window opens. The one-shot animation maps 1 timeline second to 1 scheduled minute from 09:00 and parks the robot after its route. The imported robot STEP is a mostly fused pose, so sample contact is shown by a short approach/retract rather than articulated arm joints. The route bypasses the saved workspace without replacing it; its schedule and geometry are example data, not manufacturing approval.
-
-## Import contracts
-
-- Forma: Hardware IR 0.1/0.2, `project_ir` / `hardware_ir` wrappers, `forma-project` manifest v1, and `forma.project` namespace objects. Object versions are revision counters. Mechanical placements and inline CAD mesh vertices use millimeters with Z up.
-- SDK/agent handoff: see [`docs/forma-handoff.md`](docs/forma-handoff.md) for the canonical compiled artifact contract used by the Forma SDK, OpenCode, and Codex.
-- Generated architectural assets use the `generated` source variant in bundled Astra scenes. They render in the local workbench but are not Forma-authored hardware or cloud-uploadable Forma/STEP assets.
-- Select referenced STEP artifacts together with their Forma JSON. Missing CAD falls back to labeled mechanical envelopes when available; otherwise the import reports an error. Remote CAD URLs and server-local paths are not fetched automatically.
-- STEP: `.step` and `.stp` Part 21 files are converted with `occt-import-js@0.0.23`. OpenCascade reads source units; the UI provides source-up-axis and scale correction. Geometry conversion runs in an isolated worker with a 120-second timeout. Successful conversions are cached for repeated imports.
-- Scene asset schema v1: stable content-derived asset/part IDs, source filename/digest/project identity, named hierarchy, indexed triangle meshes, dimensions, and warnings. All geometry is normalized to meters, Y up, centered in X/Z and floor-aligned; `originOffset` retains the original normalization offset. Metadata is allowlisted for display.
-- Limits: 25 MiB per file, 75 MiB per batch, 2 million vertices per asset. These are protective caps, not a benchmarked performance guarantee. STEP variants and large assemblies need broader fixture validation.
-
-## Verification
-
-With `npm start` running, run `npm test`. The Chrome smoke test checks Forma import, actual STEP conversion using an upstream cube fixture, room controls, invalid JSON recovery, and pip-installed Forma deterministic generation. Screenshots are written to `test-results/`. Chrome and network access for the STEP fixture are required.
+- [Workspace guide](docs/workspace.md) — editing, animation, persistence, missing-geometry recovery, and the inspector.
+- [Forma handoff contract](docs/forma-handoff.md) — compiled artifacts, supported formats, provenance, and CAD resolution.
+- [Development and integration guide](docs/development.md) — local generation, MCP, CLI, import contracts, GIF details, and Vercel deployment.
+- [Cloud storage guide](docs/cloud-storage.md) — private asset transfers, setup, limits, and lifecycle.
+- [Supabase Auth and database setup](supabase/README.md) — schema, GitHub login, migrations, and ownership checks.
+- [Cleanroom example](public/examples/cleanroom/README.md) — scene behavior, source models, and CAD licensing.
 
 ## Third-party software
 
-Forma Core is consumed as a pip dependency under MPL-2.0. STEP conversion uses occt-import-js and its OpenCascade/WebAssembly distribution; retain their bundled license notices when redistributing. Upstream test geometry used by the smoke test is fetched from the occt-import-js test suite rather than included in this repository.
+Forma OSS / Forma Core is used under **MPL-2.0**; preserve applicable notices and obligations when reusing upstream code. STEP conversion uses `occt-import-js` and its OpenCascade/WebAssembly distribution; retain their bundled license notices. GIF encoding uses `gifenc` (MIT), and the test decoder is `omggif` (MIT).
 
-## GIF studio and asset library
-
-Open **GIF studio** in the viewer (also available in fullscreen). Everything in this workflow runs in the browser; no Forma process, provider credentials, upload service, or server-side rendering is required.
-
-### Export for visual review
-
-1. Import your Forma/STEP assets and open **Floor export**.
-2. Choose **Entire room**, **Floor section**, or **Selected asset**. A section is defined by its X/Z center and width/depth in meters, relative to the room center. Its box is highlighted in the viewport. It must fit within the room and intersect an asset; geometry outside its six boundaries is clipped in the export.
-3. Choose 320, 480, or 640 pixels square, a 2–4 second duration, and 10 or 15 fps. Click **Render GIF**; progress and cancellation are available.
-4. Inspect the animated preview, then download the GIF and its review metadata JSON. Metadata records source asset IDs, names, provenance, instance positions, units, room/section dimensions, motion mode, frame timing, and geometry approximation warnings. Supply both files to a visual-review agent to preserve spatial context. Astra does not automatically call an LLM or apply corrections.
-
-**Turntable** makes one complete camera orbit around fixed geometry. Selected assets can also use **Sample lift-and-return**, a clearly labeled synthetic motion with a stationary camera. It is a preview preset, not an authored animation timeline or physics simulation. Captures use a separate renderer and never modify the active room or camera.
-
-GIF timing is rounded to the format's 10 ms tick: 15 fps becomes 70 ms/frame. Metadata and preview report the actual duration. At most 60 frames are encoded; frames are processed sequentially with UI yields, and temporary render resources are disposed on completion, failure, or cancellation. GIFs use a 256-color palette per frame, so some color quantization is expected.
-
-### Build a reusable asset library
-
-1. Select a room asset, open **Asset library**, and click **Save selected asset to library**.
-2. Render a **turntable** or **sample motion** preview from its card. The latest GIF and review metadata are saved with its geometry in IndexedDB. Saving the same asset ID updates its existing entry.
-3. Refresh or reopen Astra on the same browser origin: library entries and previews remain. **Add to room** restores an instance without reimporting the source file. **Remove from library** deletes the stored asset and preview while leaving existing room instances intact.
-
-The device library is per browser/device/origin and subject to browser quota and eviction. Use the explicit Cloud files actions for private geometry/GIF transfers. Cloud scenes can be saved and reopened after reload through **Save / open scenes**; portable scene JSON also bundles geometry and animation without a cloud dependency.
-
-### GIF checks
-
-With the app running on port 8787, run `npm run test:gif`. It imports deterministic fixtures, renders and decodes real GIF downloads to check dimensions, moving frames, timing and looping, verifies section filtering/metadata, tests library persistence and both motion presets, and covers cancellation, fullscreen, and mobile layout. No Forma installation or external fixture download is needed for this suite. Run `npm run test:fullscreen` for the existing fullscreen regressions. Screenshots are saved under `test-results/10-*.png`.
-
-GIF encoding uses `gifenc` (MIT); the test-only GIF decoder is `omggif` (MIT).
-
-## Vercel deployment
-
-`vercel.json` deploys the Vite frontend with `npm ci`, `npm run build`, and output directory `dist`. The project is linked to `isayahcs-projects/astra-industries` on Vercel.
-
-Production/preview environment variables:
-- `VITE_SUPABASE_URL`: the Supabase project URL.
-- `VITE_SUPABASE_PUBLISHABLE_KEY`: the public browser key (never a service-role/secret key).
-- `VITE_FORMA_GENERATION_ENABLED=false`: hides local-only Forma generation controls; generate projects with Forma separately, then import them into Astra.
-
-The deployment serves rendering, imports, GIF exports, local asset library, and GitHub Auth. The Node/Python generation server is not deployed. `.vercelignore` excludes environment files, virtual environments, local databases/caches, server code, Supabase config, and test screenshots.
-
-The Supabase production Site URL and redirect allowlist include `https://astra-industries.vercel.app`; GitHub's OAuth callback remains `https://mrhxfmtofvrgfaikllfw.supabase.co/auth/v1/callback`. Preview deployment origins must be explicitly allowed before using OAuth on them.
-
-Deploy the current checkout with `vercel deploy --prod --yes --scope isayahcs-projects`. Validate public rendering/imports/GIFs with `node scripts/deployment-smoke.mjs`. Set `ASTRA_BASE_URL=https://astra-industries.vercel.app` when running `node scripts/auth-live-smoke.mjs` to check the production GitHub redirect without signing in.
+The cleanroom robot and workbench source projects declare their mechanical CAD under **CERN-OHL-S-2.0**; see the [example provenance notes](public/examples/cleanroom/README.md). Upstream STEP test geometry is fetched by the smoke test rather than bundled in this repository.
