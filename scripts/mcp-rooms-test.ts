@@ -22,7 +22,7 @@ function rpc(method: string, params = {}): Promise<any> {
 }
 const call = (name: string, args = {}) => rpc('tools/call', { name, arguments: args });
 try {
-  assert.equal((await rpc('initialize')).serverInfo.name, 'astra-industries');
+  assert.equal((await rpc('initialize')).serverInfo.name, 'mergence');
   const names = (await rpc('tools/list')).tools.map((tool: any) => tool.name);
   for (const name of ['astra.create_room', 'astra.list_rooms', 'astra.read_room', 'astra.write_space_brief']) assert.ok(names.includes(name));
   assert.deepEqual((await call('astra.list_rooms')).structuredContent.rooms, []);

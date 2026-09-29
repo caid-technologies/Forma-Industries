@@ -18,7 +18,7 @@ try {
   assert.equal(legacy.scene.revision,2);assert.equal(legacy.scene.name,'Legacy head');
   await assert.rejects(()=>asUser(legacyOwner,()=>rpc('get_workspace_scene',[legacyScene,1,null])),/revision not found/);
   await db.query('insert into auth.users values($1),($2)',[owner,other]);
-  await db.query("insert into public.assets(id,owner_id,asset_key,name,source_kind) values($1,$2,'a','Fixture','forma')",[asset,owner]);
+  await db.query("insert into public.assets(id,owner_id,asset_key,name,source_kind) values($1,$2,'a','Fixture','form')",[asset,owner]);
   await db.query("insert into public.asset_file_versions(id,owner_id,asset_id,fingerprint,state,files) values($1,$2,$3,'fingerprint','ready',$4)",[version,owner,asset,JSON.stringify([{name:'asset.json',size:2,sha256:'a'.repeat(64)}])]);
   const doc=makeManifest(emptyWorkspace());
   doc.instances=[{id:'instance',assetId:'a',name:'Fixture',position:[0,0,0],rotation:[0,0,0],visible:true,cloudVersionId:version}];

@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { sceneTestService } from './lib/scene-test-service.ts';
 import { sceneLinkDB } from './lib/scene-link-db.ts';
-import { importForma } from '../src/lib/forma.ts';
+import { importForm } from '../src/lib/form.ts';
 import { CloudStorage } from '../src/lib/cloud-storage.ts';
 import { SceneRepository } from '../src/lib/scene-repository.ts';
 import { SceneConflictError, compareSceneRevisions } from '../src/lib/scene-history.ts';
@@ -34,7 +34,7 @@ const clientFor=(access?:string)=>createClient(service.origin,'fixture-public-ke
 const client=clientFor(session.access_token),foreign=clientFor(otherSession.access_token),anonymous=clientFor();
 const repo=new SceneRepository(client,owner,false,'http://127.0.0.1:5173');
 const storage=new CloudStorage(client,owner);
-const original=importForma({hardware_ir_version:'0.2',overview:{title:'Version fixture'},mechanical:{render_dimensions:{x_mm:400,y_mm:500,z_mm:600}}},'fixture.json','same-source-digest');
+const original=importForm({hardware_ir_version:'0.2',overview:{title:'Version fixture'},mechanical:{render_dimensions:{x_mm:400,y_mm:500,z_mm:600}}},'fixture.json','same-source-digest');
 const changed=structuredClone(original);changed.parts.push({...structuredClone(changed.parts[0]),id:`${changed.parts[0].id}-v2`,name:'Version two extension'});
 changed.parts[0].color=[.9,.1,.1];
 const saveRPC=(document:unknown,base:number,name='History fixture',writeId=randomUUID())=>client.rpc('save_workspace_scene',{p_id:id,p_name:name,p_document:document,p_expected_revision:base,p_write_id:writeId});

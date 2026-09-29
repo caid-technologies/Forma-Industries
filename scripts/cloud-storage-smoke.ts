@@ -4,7 +4,7 @@ import { mkdir } from 'node:fs/promises';
 import { createClient, type Session } from '@supabase/supabase-js';
 import { chromium, expect } from '@playwright/test';
 import { CloudStorage, CLOUD_BUCKET, CLOUD_FILE_LIMIT } from '../src/lib/cloud-storage.ts';
-import { importForma } from '../src/lib/forma.ts';
+import { importForm } from '../src/lib/form.ts';
 import { digestBytes } from '../src/lib/scene.ts';
 import { stepToAsset } from '../src/lib/step.ts';
 import { createRequire } from 'node:module';
@@ -22,7 +22,7 @@ const prefix = `astra-storage-${randomUUID()}`;
 const authOptions = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
 async function newUser() {
   const email = `${prefix}-${users.length}@example.invalid`;
-  const password = `Astra-${randomUUID()}!`;
+  const password = `Mergence-${randomUUID()}!`;
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { user_name: 'astra-storage-test' } });
   if (error || !data.user) throw new Error(`Test user setup failed: ${error?.message}`);
   const client = createClient(url, key!, authOptions);
@@ -114,7 +114,7 @@ try {
   const sceneId = crypto.randomUUID();
   const assetKey = version.asset?.asset_key ?? version.asset_id;
   const sceneDocument = { format: 'astra.scene', version: 1, units: 'm', upAxis: 'Y', room: [6, 5, 3],
-    assets: [{ id: assetKey, name: prefix, source: { kind: 'forma', filename: 'cloud-test.json', digest: version.fingerprint }, dimensions: [1, 1, 1], projectRevision: undefined }],
+    assets: [{ id: assetKey, name: prefix, source: { kind: 'form', filename: 'cloud-test.json', digest: version.fingerprint }, dimensions: [1, 1, 1], projectRevision: undefined }],
     instances: [{ id: crypto.randomUUID(), name: prefix, assetId: assetKey, position: [0, 0, 0], rotation: [0, 0, 0], visible: true, cloudVersionId: version.id }],
     animation: { duration: 3, loop: true, tracks: [] } };
   const scene = await a.store.client.rpc('save_workspace_scene', { p_id: sceneId, p_name: prefix, p_document: sceneDocument, p_expected_revision: 0, p_write_id: crypto.randomUUID() });
@@ -126,7 +126,7 @@ try {
   assert((await a.store.downloadFile(version, version.files[0].name)).size > 0);
   console.log('PASS saved-scene reference protects shared files; scene deletion retains the asset.');
 
-  const rawAsset = importForma(fixture, 'retry.json', prefix + '-retry');
+  const rawAsset = importForm(fixture, 'retry.json', prefix + '-retry');
   const gif = GIFEncoder(); gif.writeFrame(new Uint8Array([0,1,1,0]), 2, 2, { palette: [[0,0,0],[255,255,255]], delay: 100 }); gif.finish();
   const retryEntry = { id: rawAsset.id, asset: rawAsset, updatedAt: Date.now(), preview: new Blob([new Uint8Array(gif.bytes())], { type: 'image/gif' }) };
   let failedOnce = false;

@@ -34,7 +34,7 @@ New revision columns:
 | `restored_from_revision` | Restore source when applicable |
 | `change_summary` | Server-derived instance/asset counts and name/room/animation flags |
 
-Migration backfill preserves existing documents and timestamps. Missing pre-migration history cannot be reconstructed; absent parents stay null. Summaries contain known flags/counts rather than free-form prompts, provider payloads, or caller-supplied summaries. Broader retained-Forma-data sanitization remains tracked separately in #37.
+Migration backfill preserves existing documents and timestamps. Missing pre-migration history cannot be reconstructed; absent parents stay null. Summaries contain known flags/counts rather than free-form prompts, provider payloads, or caller-supplied summaries. Broader retained-Form-data sanitization remains tracked separately in #37.
 
 - `list_scene_revisions(p_id, p_before_revision = null, p_limit = 25)` returns `scene_id`, `head_revision`, metadata-only `revisions`, and `next_before`. Limit: 1–50.
 - `get_workspace_scene(p_id, p_revision, p_share_token = null)` remains the snapshot read API. The client comparison uses two owner-authorized reads and an allowlisted field diff; it does not download geometry to compare revisions.

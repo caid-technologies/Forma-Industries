@@ -18,8 +18,8 @@ try {
   expect(authorization.searchParams.get('redirect_uri')).toBe('https://mrhxfmtofvrgfaikllfw.supabase.co/auth/v1/callback');
   expect(authorization.searchParams.get('redirect_to')).toBe(base);
   await expect(page.getByRole('textbox', { name: 'Username or email address' })).toBeVisible();
-  await expect(page.getByText('Sign in to GitHub to continue to Astra Industries')).toBeVisible();
+  await expect(page.getByText('Sign in to GitHub to continue to Mergence')).toBeVisible();
   await mkdir('test-results', { recursive: true });
   await page.screenshot({ path: 'test-results/github-auth-live-provider.png' });
-  console.log('PASS live Astra → Supabase → GitHub redirect, configured client ID, expected callback, and GitHub sign-in page. Account authorization/token exchange still requires the user.');
+  console.log('PASS live Mergence → Supabase → GitHub redirect, configured client ID, expected callback, and GitHub sign-in page. Account authorization/token exchange still requires the user.');
 } finally { await browser.close(); }

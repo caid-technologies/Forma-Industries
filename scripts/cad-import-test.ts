@@ -18,7 +18,7 @@ function file(name: string, contents: string, relativePath = name): File {
 async function project(cad: unknown, artifacts: unknown[] = []) {
   const cadFile = file('enclosure.step', 'cad-bytes', 'models/enclosure.step');
   const hash = await digestBytes(await cadFile.arrayBuffer());
-  const json = file('forma-project.json', JSON.stringify({ format: 'forma-project', version: 1,
+  const json = file('form-project.json', JSON.stringify({ format: 'form-project', version: 1,
     project_ir: { hardware_ir_version: '0.2', overview: { title: 'Enclosure' }, mechanical: { render_dimensions: { x_mm: 10, y_mm: 10, z_mm: 10 } }, cad_model: cad },
     artifacts }));
   return { json, cadFile, hash };

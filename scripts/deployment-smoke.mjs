@@ -9,11 +9,11 @@ try {
   expect(response.status()).toBe(200);
   await expect(page.locator('canvas')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign in with GitHub' })).toBeEnabled();
-  await expect(page.getByText('Build with Forma', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Build with Form', { exact: true })).toHaveCount(0);
   await page.locator('input[type=file]').setInputFiles({ name: 'deployed-fixture.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({
-    hardware_ir_version: '0.2', overview: { title: 'Deployed Forma fixture' }, mechanical: { render_dimensions: { x_mm: 1800, y_mm: 800, z_mm: 900 } },
+    hardware_ir_version: '0.2', overview: { title: 'Deployed Form fixture' }, mechanical: { render_dimensions: { x_mm: 1800, y_mm: 800, z_mm: 900 } },
   })) });
-  await expect(page.getByRole('heading', { name: 'Deployed Forma fixture' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Deployed Form fixture' })).toBeVisible();
   const step = await fetch('https://raw.githubusercontent.com/kovacsv/occt-import-js/master/test/testfiles/simple-basic-cube/cube.stp');
   if (!step.ok) throw new Error('STEP fixture download failed');
   await page.locator('input[type=file]').setInputFiles({ name: 'cube.stp', mimeType: 'model/step', buffer: Buffer.from(await step.arrayBuffer()) });
@@ -29,5 +29,5 @@ try {
   await mkdir('test-results', { recursive: true });
   await page.screenshot({ path: 'test-results/vercel-production.png' });
   expect(errors).toEqual([]);
-  console.log('PASS public production HTTP 200, Auth controls, Forma import, hosted STEP/WASM conversion at correct scale, GIF rendering, and zero page errors.');
+  console.log('PASS public production HTTP 200, Auth controls, Form import, hosted STEP/WASM conversion at correct scale, GIF rendering, and zero page errors.');
 } finally { await browser.close(); }

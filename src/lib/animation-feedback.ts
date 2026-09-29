@@ -12,7 +12,7 @@ export type AnimationFeedback = {
 };
 
 export function makeAnimationFeedback(workspace: Workspace, review: GifMetadata, instruction: string): AnimationFeedback {
-  if (review.motion !== 'animation' || !review.frames?.length) throw new Error('Render an authored timeline animation before sending feedback to Forma.');
+  if (review.motion !== 'animation' || !review.frames?.length) throw new Error('Render an authored timeline animation before sending feedback to Form.');
   const text = instruction.trim();
   if (!text || text.length > 4000) throw new Error('Describe the animation feedback in 1–4,000 characters.');
   return scrubCloudData({

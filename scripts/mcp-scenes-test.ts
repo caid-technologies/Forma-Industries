@@ -12,7 +12,7 @@ import { hydrateManifest, readManifest, evaluateWorkspace } from '../src/lib/wor
 import { CloudStorage } from '../src/lib/cloud-storage.ts';
 import { openSceneLink } from '../src/lib/scene-link-loader.ts';
 import { readSceneLink } from '../src/lib/scene-links.ts';
-import { importForma } from '../src/lib/forma.ts';
+import { importForm } from '../src/lib/form.ts';
 import { executeSceneTool, workbenchOrigin } from '../server/mcp-scenes.ts';
 
 const root = await mkdtemp(join(tmpdir(), 'astra-mcp-scenes-'));
@@ -62,7 +62,7 @@ try {
   const list = await ok('list_scene_assets', { version: 1 }); assert.equal(list.assets.length, 3);
   assert.equal(list.assets[0].source_kind, 'generated');
   const inspected = await ok('inspect_scene_asset', { version: 1, asset: list.assets[0].asset });
-  assert(inspected.asset.parts.length >= 5); assert.equal(inspected.asset.provenance.generator, 'forma-industries');
+  assert(inspected.asset.parts.length >= 5); assert.equal(inspected.asset.provenance.generator, 'form-industries');
   const before = await counts();
   for (const mutate of [
     (a: any) => { a.version = 2; }, (a: any) => { a.scene.room.width = -1; },
@@ -119,20 +119,20 @@ try {
   await bad('inspect_scene_asset', { version: 1, asset: read.scene.instances[0].asset }, 'ASSET_UNAVAILABLE');
   assert.equal((await ok('list_scene_assets', { version: 1 })).assets.length, 3);
   await writeFile(config, JSON.stringify(session));
-  // Forma geometry follows the same immutable path and never exposes retained provider config.
-  const forma = importForma({ hardware_ir_version: '0.2', overview: { title: 'Fixture machine' }, mechanical: { render_dimensions: { x_mm: 100, y_mm: 200, z_mm: 300 } } }, 'fixture.json', 'fixture-digest');
-  (forma as any).formaProject = { projectId: 'fixture', revision: '1', ir: { runtime_config: { base_url: 'private-provider-canary', api_key: 'secret-canary' } }, source: 'raw_ir', hardwareIrVersion: '0.2' };
-  const formaVersion = await storage.upload({ id: forma.id, asset: forma, updatedAt: 0 }, () => {});
-  const formaDetail = await ok('inspect_scene_asset', { version: 1, asset: { kind: 'cloud', version_id: formaVersion.id } });
-  assert(!JSON.stringify(formaDetail).includes('canary'));
-  const formaRequest = { ...fixture, request_id: randomUUID(), scene: { ...fixture.scene, instances: [{ ...fixture.scene.instances[0], id: 'machine', asset: { kind: 'cloud', version_id: formaVersion.id } }], animation: { duration: 2, loop: false, tracks: [{ instance_id: 'machine', part_id: forma.parts[0].id, keys: [{ time: 0, position: [0, 0, 0], rotation: [0, 0, 0] }, { time: 2, position: [0, 1, 0], rotation: [0, 0, 0] }] }] } } };
-  const formaCreated = await ok('create_scene', formaRequest);
-  const formaDoc: any = (await service.sql('select document from scenes where id=$1', [formaCreated.scene_id])).rows[0].document;
-  assert(!JSON.stringify(formaDoc).includes('canary')); assert(!JSON.stringify(formaDoc).includes('runtime_config'));
+  // Form geometry follows the same immutable path and never exposes retained provider config.
+  const form = importForm({ hardware_ir_version: '0.2', overview: { title: 'Fixture machine' }, mechanical: { render_dimensions: { x_mm: 100, y_mm: 200, z_mm: 300 } } }, 'fixture.json', 'fixture-digest');
+  (form as any).formProject = { projectId: 'fixture', revision: '1', ir: { runtime_config: { base_url: 'private-provider-canary', api_key: 'secret-canary' } }, source: 'raw_ir', hardwareIrVersion: '0.2' };
+  const formVersion = await storage.upload({ id: form.id, asset: form, updatedAt: 0 }, () => {});
+  const formDetail = await ok('inspect_scene_asset', { version: 1, asset: { kind: 'cloud', version_id: formVersion.id } });
+  assert(!JSON.stringify(formDetail).includes('canary'));
+  const formRequest = { ...fixture, request_id: randomUUID(), scene: { ...fixture.scene, instances: [{ ...fixture.scene.instances[0], id: 'machine', asset: { kind: 'cloud', version_id: formVersion.id } }], animation: { duration: 2, loop: false, tracks: [{ instance_id: 'machine', part_id: form.parts[0].id, keys: [{ time: 0, position: [0, 0, 0], rotation: [0, 0, 0] }, { time: 2, position: [0, 1, 0], rotation: [0, 0, 0] }] }] } } };
+  const formCreated = await ok('create_scene', formRequest);
+  const formDoc: any = (await service.sql('select document from scenes where id=$1', [formCreated.scene_id])).rows[0].document;
+  assert(!JSON.stringify(formDoc).includes('canary')); assert(!JSON.stringify(formDoc).includes('runtime_config'));
   const aborted = new AbortController(); aborted.abort();
   await assert.rejects(() => executeSceneTool('astra.list_scene_assets', { version: 1 }, { client, owner, origin: 'http://localhost:5173', signal: aborted.signal }), (e: any) => e.code === 'TIMEOUT');
   for (const origin of ['file:///tmp', 'http://user:secret@localhost:5173', 'http://localhost:5173/path', 'http://example.com']) assert.throws(() => workbenchOrigin(origin));
-  const staticScene = structuredClone(formaRequest); staticScene.request_id = randomUUID(); delete (staticScene.scene as any).animation;
+  const staticScene = structuredClone(formRequest); staticScene.request_id = randomUUID(); delete (staticScene.scene as any).animation;
   const staticCreated = await ok('create_scene', staticScene);
   assert.deepEqual((await ok('read_scene', { version: 1, scene_id: staticCreated.scene_id })).scene.animation, { duration: 3, loop: false, tracks: [] });
   if (process.argv.includes('--browser')) {
@@ -168,5 +168,5 @@ try {
       console.log('PASS fresh-browser MCP revision URL: six instances, generated architecture, STEP geometry, and authored robot motion.');
     } finally { await browser?.close(); await web.close(); }
   }
-  console.log('PASS MCP stdio schemas; deterministic cleanroom create/read/update; real SQL revisions/RLS; generated/STEP/Forma geometry and animation; retry/interruption/conflict; auth/account switch; bounded validation and sanitized outputs.');
+  console.log('PASS MCP stdio schemas; deterministic cleanroom create/read/update; real SQL revisions/RLS; generated/STEP/Form geometry and animation; retry/interruption/conflict; auth/account switch; bounded validation and sanitized outputs.');
 } finally { for (const child of children) child.kill(); await service.close(); await rm(root, { recursive: true, force: true }); }

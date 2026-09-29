@@ -96,7 +96,7 @@ begin
   if jsonb_typeof(p_document) is distinct from 'object' or p_document->>'format' is distinct from 'astra.scene'
     or p_document->>'version' is distinct from '1' or p_document->>'units' is distinct from 'm'
     or p_document->>'upAxis' is distinct from 'Y' or jsonb_typeof(p_document->'instances') is distinct from 'array'
-    or p_document ? 'bundledAssets' or p_document ? 'bundledVersions' then raise exception 'Expected an Astra scene manifest without binary geometry'; end if;
+    or p_document ? 'bundledAssets' or p_document ? 'bundledVersions' then raise exception 'Expected a Mergence scene manifest without binary geometry'; end if;
   if jsonb_array_length(p_document->'instances') > 1000 then raise exception 'Scene exceeds 1000 instances'; end if;
   select * into result from public.scenes where id=p_id for update;
   if found then

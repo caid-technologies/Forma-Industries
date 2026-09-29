@@ -4,7 +4,7 @@ create table public.assets (
   owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   asset_key text not null check (char_length(asset_key) between 1 and 256),
   name text not null check (char_length(btrim(name)) between 1 and 200),
-  source_kind text not null check (source_kind in ('forma', 'step')),
+  source_kind text not null check (source_kind in ('form', 'step')),
   metadata jsonb not null default '{}'::jsonb
     check (jsonb_typeof(metadata) = 'object' and octet_length(metadata::text) <= 524288),
   created_at timestamptz not null default now(),

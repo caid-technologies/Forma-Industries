@@ -13,27 +13,27 @@ export type AssetNode = { id: string; name: string; partIds: string[]; children:
 export type Instance = { id: string; assetId: string; name: string; position: Vec3 };
 export type Room = { width: number; depth: number; height: number; walls: boolean };
 
-export type FormaComponent = { ref_des: string; part_definition_id?: string; name?: string; category?: string; [key: string]: unknown };
-export type FormaIR = {
-  hardware_ir_version?: string; overview?: Record<string, unknown>; components?: FormaComponent[];
+export type FormComponent = { ref_des: string; part_definition_id?: string; name?: string; category?: string; [key: string]: unknown };
+export type FormIR = {
+  hardware_ir_version?: string; overview?: Record<string, unknown>; components?: FormComponent[];
   part_definitions?: Record<string, unknown>[]; bom?: Record<string, unknown>[]; nets?: Record<string, unknown>[];
   mechanical?: Record<string, unknown>; validation?: Record<string, unknown>; assembly?: unknown[];
   assembly_metadata?: Record<string, unknown>; [key: string]: unknown;
 };
-export type FormaProject = {
+export type FormProject = {
   projectId?: string;
   revision?: string;
   agent?: string;
   hardwareIrVersion: string;
-  ir: FormaIR;
+  ir: FormIR;
   source: 'project_ir' | 'hardware_ir' | 'namespace' | 'raw_ir';
   sourceDocument?: Record<string, unknown>;
   artifacts?: Record<string, unknown>[];
 };
 export type AssetSource =
-  | { kind: 'forma'; filename: string; digest: string; projectId?: string; version?: string }
+  | { kind: 'form'; filename: string; digest: string; projectId?: string; version?: string }
   | { kind: 'step'; filename: string; digest: string; projectId?: never; version?: never }
-  | { kind: 'generated'; filename: string; digest: string; generator: 'forma-industries'; projectId?: never; version?: never };
+  | { kind: 'generated'; filename: string; digest: string; generator: 'form-industries'; projectId?: never; version?: never };
 
 export type Asset = {
   schemaVersion: 1;
@@ -47,7 +47,7 @@ export type Asset = {
   dimensions: Vec3;
   originOffset: Vec3;
   warnings: string[];
-  formaProject?: FormaProject;
+  formProject?: FormProject;
 };
 
 export function finalizeAsset(asset: Omit<Asset, 'dimensions' | 'originOffset' | 'units' | 'upAxis' | 'schemaVersion'>): Asset {

@@ -3,7 +3,7 @@ import { existsSync, readFileSync, mkdirSync, writeFileSync, chmodSync } from 'n
 import { homedir, platform } from 'node:os';
 import { dirname, join } from 'node:path';
 
-export const configPath = process.env.ASTRA_CLI_CONFIG || join(process.env.APPDATA || join(homedir(), '.config'), 'Astra', 'auth.json');
+export const configPath = process.env.ASTRA_CLI_CONFIG || join(process.env.APPDATA || join(homedir(), '.config'), 'Mergence', 'auth.json');
 export function loadEnv(root = process.cwd()) {
   for (const file of ['.env', '.env.local']) {
     const path = join(root, file);
@@ -37,9 +37,9 @@ export async function sessionClient(options = {}) {
   if (!stored?.access_token || !stored?.refresh_token) throw new Error('Sign in first with "astra auth login".');
   const supabase = client(options);
   const { data, error } = await supabase.auth.setSession({ access_token: stored.access_token, refresh_token: stored.refresh_token });
-  if (error || !data.session) throw new Error('Astra session expired. Run "astra auth login" again.');
+  if (error || !data.session) throw new Error('Mergence session expired. Run "astra auth login" again.');
   if (data.session.refresh_token !== stored.refresh_token || data.session.access_token !== stored.access_token) writeAuth(data.session);
   const { data: verified, error: userError } = await supabase.auth.getUser();
-  if (userError || !verified.user) throw new Error('Astra account could not be verified. Sign in again.');
+  if (userError || !verified.user) throw new Error('Mergence account could not be verified. Sign in again.');
   return { supabase, session: data.session, owner: verified.user.id };
 }

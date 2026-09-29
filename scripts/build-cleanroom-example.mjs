@@ -11,8 +11,8 @@ room.bundledAssets[architectureIndex] = architecture;
 Object.assign(room.assets.find(asset => asset.id === architecture.id), {
   name: architecture.name, source: architecture.source, dimensions: architecture.dimensions,
 });
-const robot = room.instances.find(instance => instance.name === 'Forma Swab-Sampling Robot');
-if (!robot) throw new Error('Cleanroom scene is missing the Forma swab robot instance.');
+const robot = room.instances.find(instance => instance.name === 'Form Swab-Sampling Robot');
+if (!robot) throw new Error('Cleanroom scene is missing the Form swab robot instance.');
 robot.position = [-3.048, .16, -7.2];
 robot.rotation = [0, 90, 0];
 room.animation = createCleanroomSamplingAnimation(robot.id);

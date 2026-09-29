@@ -11,7 +11,7 @@ export type CloudVersion = {
   asset?: { name: string; asset_key: string; source_kind: string };
 };
 
-// Compiled Forma data may retain provider metadata. Never transfer credential fields.
+// Compiled Form data may retain provider metadata. Never transfer credential fields.
 export function scrubCloudData(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(scrubCloudData);
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value)
@@ -25,9 +25,9 @@ export function parseCloudBundle(text: string): LibraryEntry {
   try { bundle = JSON.parse(text); } catch { throw new Error('Cloud geometry is not valid JSON. Re-upload the original asset.'); }
   const asset = bundle?.asset as Asset;
   if (bundle?.schemaVersion !== 1 || asset?.schemaVersion !== 1 || asset.units !== 'm' || asset.upAxis !== 'Y'
-      || typeof asset.id !== 'string' || typeof asset.name !== 'string' || !['forma', 'step', 'generated'].includes(asset.source?.kind)
+      || typeof asset.id !== 'string' || typeof asset.name !== 'string' || !['form', 'step', 'generated'].includes(asset.source?.kind)
       || typeof asset.source.filename !== 'string' || typeof asset.source.digest !== 'string'
-      || (asset.source.kind === 'generated' && asset.source.generator !== 'forma-industries')
+      || (asset.source.kind === 'generated' && asset.source.generator !== 'form-industries')
       || !Array.isArray(asset.parts) || !Array.isArray(asset.warnings) || !asset.warnings.every(w => typeof w === 'string')
       || !Array.isArray(asset.originOffset) || asset.originOffset.length !== 3 || !asset.originOffset.every(Number.isFinite)) {
     throw new Error('Unsupported or incomplete cloud asset bundle.');
