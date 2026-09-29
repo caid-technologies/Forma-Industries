@@ -21,6 +21,7 @@ jobs:
       - run: node --import tsx scripts/workspace-test.ts
       - run: npm run test:scene-links
       - run: npx playwright install --with-deps chromium
+      - run: npm run test:portable-scenes-browser
       - run: npm run test:mcp-scenes-browser
       - run: npm run test:scene-history-browser
       - run: npm run test:mcp-agent-workflows-browser

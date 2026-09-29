@@ -42,7 +42,27 @@ When present, the manifest should include:
 - `validation`: compiler validation summary and findings.
 - `artifacts`: local artifact paths and optional SHA-256 digests.
 
-Provider credentials, MCP tokens, API keys, prompts containing secrets, and server logs must not be written to the artifact.
+### Portable data policy
+
+Authoring provenance identifies the project and its author; runtime configuration describes how a provider was called. Only the former belongs in a portable artifact.
+
+| Retained authoring/hardware data | Excluded execution data |
+| --- | --- |
+| Project ID, revision, authoring agent, Hardware IR version | `runtime_config`, provider/model/LLM/inference configuration and settings containers |
+| Components, BOM, compiler findings, mechanical placements, geometry | Provider identifiers, model identifiers, API base URLs and provider endpoints |
+| Source filename/digest, CAD references, artifact paths and SHA-256 digests | Credential fields, including API keys, passwords, authorization and tokens |
+
+The shared `scrubPortableData` policy recursively removes these fields through objects, arrays, SDK `response` wrappers, namespace payloads, and retained source documents. Field matching ignores case, underscores and hyphens. Generic `model`, `endpoint` and `temperature` fields are excluded in authoring metadata and records containing runtime settings; CAD adapters such as `cad_model.model` and physical component/BOM `model` values are retained. `agent`, `source_agent`, project IDs and revision counters are not provider configuration and remain intact.
+
+This policy runs when importing Form data, reading legacy geometry bundles or scene manifests, writing cloud geometry, exporting portable scenes (including pinned `bundledVersions`) or recovery downloads, and reading/saving local Form files through MCP. CLI room import/export uses the same policy. MCP scene responses also keep their existing allowlisted contract. Sanitization returns a new object: original files and immutable cloud bytes are not rewritten, and their byte digests remain source identities. Legacy records are sanitized on read and on their next export; this is not a migration of previously stored objects.
+
+Producers must still exclude prompts containing secrets and server logs. This is a structured-field policy, not a scanner that can recognize arbitrary secrets pasted into free-form prose or binary CAD files.
+
+### Source revision recovery
+
+A scene reference binds the asset ID, source kind, source digest, Form project ID/schema version, and source revision when present. Both opening a scene and repairing missing geometry check these values. An ID match alone is insufficient. A mismatch reports how to recover before replacing the current workspace; reimport the original project/revision or open a portable scene containing its matching geometry. Correct repairs retain instance IDs, transforms, visibility, room dimensions and animation. Cloud-pinned instances additionally require their exact immutable file-version binding.
+
+Deterministic checks: `npm run test:portable-scenes` covers nested wrappers, retained CAD/BOM/provenance, legacy bundles, pinned exports and mismatch recovery. `npm run test:portable-scenes-browser` verifies export/import across browser origins and a visible mismatch warning without replacing the current room. `npm run test:mcp-scenes` checks actual uploaded JSON bytes and local MCP Form read/save boundaries. No live provider credentials are required.
 
 ## CAD Resolution
 

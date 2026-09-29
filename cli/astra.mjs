@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { configPath, client, sessionClient, writeAuth } from './session.mjs';
+import { scrubPortableData } from '../src/lib/portable-data.mjs';
 
 const REDIRECT_URL = process.env.ASTRA_CLI_REDIRECT_URL || 'http://127.0.0.1:54331/callback';
 function openBrowser(url) {
@@ -52,7 +53,7 @@ function validateRoom(document) {
   return document;
 }
 function cloudDocument(document) {
-  const copy = structuredClone(validateRoom(document));
+  const copy = scrubPortableData(validateRoom(document));
   delete copy.bundledAssets;
   delete copy.bundledVersions;
   copy.authoring = { via: 'cli' };
@@ -69,7 +70,7 @@ async function exportRoom(id, path) {
   const { supabase } = await sessionClient(); const user = await currentUser(supabase);
   const { data, error } = await supabase.from('scenes').select('id,name,revision,updated_at,document').eq('id', id).eq('owner_id', user.id).single();
   if (error || !data) throw new Error('Cloud room not found for the signed-in Mergence account.');
-  validateRoom(data.document); mkdirSync(dirname(resolve(path)), { recursive: true }); writeFileSync(resolve(path), JSON.stringify(data.document, null, 2) + '\n', 'utf8');
+  validateRoom(data.document); mkdirSync(dirname(resolve(path)), { recursive: true }); writeFileSync(resolve(path), JSON.stringify(scrubPortableData(data.document), null, 2) + '\n', 'utf8');
   console.log(`Exported ${data.name} to ${path}.`);
 }
 async function importRoom(path, name) {

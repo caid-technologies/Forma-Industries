@@ -1,7 +1,8 @@
 import type { Asset } from './scene';
-import type { VersionedAsset } from './workspace';
+import { assertSourceMatches, type VersionedAsset } from './workspace';
 import { validateScene, type MergenceScene } from './scene-manifest';
 import { parseCloudBundle } from './cloud-storage';
+import { scrubPortableData } from './portable-data.mjs';
 
 const DATABASE='astra-scenes';
 const VERSION=1;
@@ -102,7 +103,8 @@ export async function loadScene(scope?:string):Promise<StoredScene|undefined>{
             const candidate=scope||version?(record(row)&&row.scope===scope&&row.cloudVersionId===version?row.asset:undefined):row;
             const asset=parseCloudBundle(JSON.stringify({schemaVersion:1,asset:candidate})).asset;
             const ref=scene.workspaceDocument?.assets.find(ref=>ref.id===id);
-            if(asset.id!==id||(ref&&(asset.source.digest!==ref.source.digest||asset.source.version!==ref.source.version||(ref.projectRevision!==undefined&&asset.formProject?.revision!==ref.projectRevision))))throw new Error('Cached source identity mismatch');
+            if(asset.id!==id)throw new Error('Cached source identity mismatch');
+            if(ref)assertSourceMatches(ref,asset);
             if(version)result!.versionedAssets.push({cloudVersionId:version,asset});else result!.assets.push(asset);
           }catch{
             // Preserve the scene/instance/reference. The workspace hydrator will
@@ -126,7 +128,7 @@ function relevantAssets(rows:unknown[],scope?:string):unknown[]{
 export async function exportStoredDraft(scope?:string):Promise<DraftBackup>{
   return transact(scope,'readonly',tx=>{
     const saved=tx.objectStore('scenes').get(sceneKey(scope));const assets=backupAssets(tx,scope);
-    return()=>({format:'astra.draft-backup',version:1,originalKey:sceneKey(scope),createdAt:new Date().toISOString(),record:saved.result??null,assets:relevantAssets(assets.result,scope)});
+    return()=>scrubPortableData({format:'astra.draft-backup',version:1,originalKey:sceneKey(scope),createdAt:new Date().toISOString(),record:saved.result??null,assets:relevantAssets(assets.result,scope)}) as DraftBackup;
   });
 }
 

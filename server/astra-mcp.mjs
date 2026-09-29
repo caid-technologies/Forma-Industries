@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync } from 
 import { dirname, relative, resolve } from 'node:path';
 import { callRoomTool, roomTools } from './mcp-rooms.mjs';
 import { sceneTools } from './mcp-scene-contract.mjs';
+import { scrubPortableData as scrub } from '../src/lib/portable-data.mjs';
 
 let sceneRuntime;
 async function sceneModule() {
@@ -18,10 +19,7 @@ const localPath = value => {
   if (rel.startsWith('..') || rel.includes(':')) throw new Error('Mergence MCP paths must stay inside the checkout.');
   return candidate;
 };
-const scrub = value => Array.isArray(value) ? value.map(scrub) : value && typeof value === 'object'
-  ? Object.fromEntries(Object.entries(value).filter(([key]) => !/(api.?key|secret|password|credential|authorization|token)/i.test(key)).map(([key, item]) => [key, scrub(item)]))
-  : value;
-const textResult = value => ({ content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value });
+const textResult = value => { const clean = scrub(value); return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }], structuredContent: clean }; };
 
 const tools = [
   ...roomTools,
@@ -49,7 +47,7 @@ async function callTool(name, args = {}) {
   if (name === 'astra.save_form_project') {
     if (!args.project_ir || typeof args.project_ir !== 'object' || Array.isArray(args.project_ir)) throw new Error('project_ir must be an object.');
     const path = localPath(args.path); if (!existsSync(path)) throw new Error(`Form project was not found: ${args.path}`);
-    const current = json(path); const next = { ...current, project_ir: scrub(args.project_ir), agent: current.agent || 'opencode' };
+    const current = json(path); const next = scrub({ ...current, project_ir: args.project_ir, agent: current.agent || 'opencode' });
     const serialized = JSON.stringify(next, null, 2); if (Buffer.byteLength(serialized, 'utf8') > 10 * 1024 * 1024) throw new Error('Form project exceeds the 10 MiB local MCP limit.');
     writeFileSync(path, serialized + '\n', 'utf8');
     return { saved: true, path: relative(root, path).replaceAll('\\', '/'), project_id: next.project_id || next.project_ir?.assembly_metadata?.project_id };
