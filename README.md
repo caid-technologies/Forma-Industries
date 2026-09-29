@@ -2,7 +2,7 @@
 
 **Arrange hardware in a 3D space, animate how it moves, and share the layout for review.**
 
-Mergence is a spatial workbench that runs locally in your browser for planning fabrication shops, manufacturing spaces, and laboratories. Import equipment from [Form OSS](https://github.com/caid-technologies/Form-OSS) or a STEP CAD file, place it in a room at real-world scale, and preview a workflow before moving physical equipment.
+Mergence is a spatial workbench that runs locally in your browser for planning fabrication shops, manufacturing spaces, and laboratories. Import equipment from [Form](https://github.com/caid-technologies/Form-OSS) or a STEP CAD file, place it in a room at real-world scale, and preview a workflow before moving physical equipment.
 
 This is a hackathon project by CAID Technologies.
 
