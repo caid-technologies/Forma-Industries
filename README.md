@@ -2,11 +2,11 @@
 
 **Arrange hardware in a 3D space, animate how it moves, and share the layout for review.**
 
-Astra Industries is a browser-based spatial workbench for planning fabrication shops, manufacturing spaces, and laboratories. Import equipment from [Forma OSS](https://github.com/caid-technologies/Forma-OSS) or a STEP CAD file, place it in a room at real-world scale, and preview a workflow before moving physical equipment.
+Astra Industries is a spatial workbench that runs locally in your browser for planning fabrication shops, manufacturing spaces, and laboratories. Import equipment from [Forma OSS](https://github.com/caid-technologies/Forma-OSS) or a STEP CAD file, place it in a room at real-world scale, and preview a workflow before moving physical equipment.
 
 This is a hackathon project by CAID Technologies. **Forma-Industries is the repository name; Astra Industries is the application name.**
 
-[Open the app](https://astra-industries.vercel.app) · [Try the cleanroom demo](https://astra-industries.vercel.app/?scene=cleanroom) · [Run locally](#run-locally) · [Documentation](#documentation)
+[Run locally](#run-locally) · [Try the local demo](#try-the-local-demo) · [Documentation](#documentation)
 
 ## Why use it?
 
@@ -14,17 +14,17 @@ A hardware model describes an individual piece of equipment. Planning a workspac
 
 Astra brings those models into one editable scene. A maker can compare workbench arrangements, a manufacturing team can illustrate material flow, and a lab team can review an equipment layout or sampling route. The output is a room layout, an animation, and files that others can reopen or review.
 
-## Try it without installing anything
+## Try the local demo
 
-Open the [cleanroom demo](https://astra-industries.vercel.app/?scene=cleanroom). It includes four rooms, stainless workbenches, and a Forma-authored swab-sampling robot. The animation visits Rooms A and C and skips occupied Room B, showing how equipment, space, and a schedule fit together. The demo opens without replacing your saved workspace.
+Follow [Run locally](#run-locally) to install the project and start `npm run dev`, then open the [cleanroom demo](http://127.0.0.1:5173/?scene=cleanroom). It includes four rooms, stainless workbenches, and a Forma-authored swab-sampling robot. The animation visits Rooms A and C and skips occupied Room B, showing how equipment, space, and a schedule fit together. The demo opens without replacing your saved workspace.
 
-To make your own layout, open the [main workbench](https://astra-industries.vercel.app):
+To make your own layout, open the [local workbench](http://127.0.0.1:5173):
 
 1. Choose **Space brief / local demo**, select a maker, manufacturing, or biofab space, and click **Build space layout**. This creates a preset layout with labeled equipment placeholders and a material-flow animation.
 2. Or choose **Import project** / **Drop files or browse** to open your own Forma JSON, STEP model, or saved Astra scene.
 3. Adjust the room and equipment, then use **Animate**, **GIF studio**, or **Export scene JSON** to inspect and share the result.
 
-You can import, edit, animate, and export locally without signing in. GitHub sign-in is used for cloud features.
+You can import, edit, animate, and export locally without signing in. Optional cloud features use GitHub sign-in and a configured Supabase backend; the workbench itself runs on your machine.
 
 ## What you can do today
 
@@ -101,7 +101,7 @@ Copy [`.env.example`](.env.example) to `.env` when you need configuration. Resta
 | Live Forma generation | Configure server-side provider credentials in `.env` and select a provider/model in the UI. Live provider calls have not yet been verified in this project. |
 | GitHub sign-in and cloud scenes | Configure Supabase Auth/Postgres and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. See [Auth/database setup](supabase/README.md). |
 | Private cloud geometry and GIFs | Apply the storage migrations and set `VITE_CLOUD_STORAGE_ENABLED=true`. See the [storage guide](docs/cloud-storage.md). |
-| Browser-only deployment | Set `VITE_FORMA_GENERATION_ENABLED=false`. Generate equipment separately and import it; the hosted frontend does not run the Node/Python bridge. |
+| Hide local generation controls | Set `VITE_FORMA_GENERATION_ENABLED=false` if you generate equipment separately and only need to import it. |
 | Local agents and CLI | See [OpenCode/MCP setup](docs/development.md#optional-forma-mcp-demo), [room creation through MCP](docs/development.md#create-rooms-through-mcp), and the [Astra CLI](docs/development.md#astra-cli). |
 
 Only public Supabase browser configuration belongs in `VITE_` variables. Provider credentials and Supabase service-role keys must stay out of the browser bundle.
@@ -128,7 +128,7 @@ Astra is a working prototype for spatial planning and visual review. Keep these 
 - **The cleanroom route is illustrative.** Its access schedule is example data, and the mostly fused robot CAD uses whole-robot approach/retract motion to approximate sampling. See the [example notes](public/examples/cleanroom/README.md).
 - **Imports have practical limits.** Equipment imports are capped at 25 MiB per file, 75 MiB per batch, and 2 million vertices per asset. Large assemblies and STEP variants still need broader validation.
 - **Companion CAD must be selected explicitly.** Astra does not automatically fetch remote CAD URLs or server-local paths. Missing CAD uses labeled envelopes when the project provides them, or reports an error.
-- **Agent integration is optional and local.** The deployed frontend supports imports and visual review; the Forma generation and feedback bridge runs separately. Design changes go through an explicit review and reimport loop.
+- **Agent integration is optional and local.** The local workbench supports imports and visual review; the Forma generation and feedback bridge uses the local API server. Design changes go through an explicit review and reimport loop.
 
 ## Development checks
 
@@ -150,7 +150,7 @@ Live cloud tests need a dedicated Supabase test project and test-only credential
 
 - [Workspace guide](docs/workspace.md) — editing, animation, persistence, missing-geometry recovery, and the inspector.
 - [Forma handoff contract](docs/forma-handoff.md) — compiled artifacts, supported formats, provenance, and CAD resolution.
-- [Development and integration guide](docs/development.md) — local generation, MCP, CLI, import contracts, GIF details, and Vercel deployment.
+- [Development and integration guide](docs/development.md) — local generation, MCP, CLI, import contracts, and GIF details.
 - [Scene links](docs/scene-links.md) — private scene/revision URLs, expiring shared links, and deployment steps.
 - [Cloud storage guide](docs/cloud-storage.md) — private asset transfers, setup, limits, and lifecycle.
 - [Supabase Auth and database setup](supabase/README.md) — schema, GitHub login, migrations, and ownership checks.
