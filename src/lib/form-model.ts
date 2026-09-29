@@ -106,7 +106,7 @@ const mechanical = object({ physical_form: text, enclosure_type: text, mounting_
   render_dimensions: optional(nullable(size)), component_placements: optional(array(placement)),
   spatial_relationships: optional(array(spatialRelationship)), cad_sources: optional(array(cadSource)),
   motion_intents: optional(array(motion)), cad_operations: optional(array(dictionary)), mechanism_benchmark: optional(nullable(dictionary)) });
-const provenance = object({ project_id: text, revision: optional(revision), source_agent: text, agent: text,
+const provenance = object({ project_id: text, revision: optional(revision), source_agent: text, agent: text, authoring_agent: text, compile_revision: optional(revision),
   created_at: text, updated_at: text, generated_at: text, generation_timestamp: text });
 const artifact = object({ path: nonempty, sha256: optional(nonempty), kind: text, mime_type: text, size_bytes: optional(nonnegative) });
 const assemblyStep = object({ step_num: optional(count), title: text, description: text, danger_flag: optional(boolean),

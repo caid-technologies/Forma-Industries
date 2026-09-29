@@ -38,7 +38,9 @@
     "test:scene-history-browser": "node --import tsx scripts/scene-history-test.ts --browser",
     "test:mcp-agent-workflows": "node --import tsx scripts/mcp-agent-workflows-test.ts",
     "test:mcp-agent-workflows-browser": "node --import tsx scripts/mcp-agent-workflows-test.ts --browser",
-    "demo:mcp-scene": "node scripts/replay-scene-workflow.mjs"
+    "demo:mcp-scene": "node scripts/replay-scene-workflow.mjs",
+    "test:form-workflows": "node --import tsx scripts/form-workflows-test.ts",
+    "test:form-workflows-browser": "node --import tsx scripts/form-workflows-browser-test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

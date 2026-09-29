@@ -62,7 +62,7 @@ export function readFormDocument(input: unknown, filename: string): FormDocument
     }
     const payload = (name: string) => namespaces.get(name) ?? {};
     const schema = readHardwareVersion(payload('project.meta').hardware_ir_version, '0.2', 'project.meta.hardware_ir_version');
-    rawIR = { ...payload('project.meta'), ...payload('project.docs'), ...payload('product.overview'), ...payload('product.architecture'), ...payload('product.electrical'), ...payload('product.mech'), ...payload('product.assembly'), ...payload('product.validation') };
+    rawIR = { ...payload('project.meta'), ...payload('project.docs'), ...payload('project.history'), ...payload('product.overview'), ...payload('product.architecture'), ...payload('product.electrical'), ...payload('product.mech'), ...payload('product.assembly'), ...payload('product.validation') };
     const bom = payload('product.bom');
     if (bom.line_items !== undefined) rawIR.bom = readBOM(bom.line_items, 'product.bom.line_items');
     else if (bom.bom !== undefined) rawIR.bom = readBOM(bom.bom, 'product.bom.bom');
@@ -77,11 +77,11 @@ export function readFormDocument(input: unknown, filename: string): FormDocument
   const ir = readHardwareIR(rawIR, source);
   const metadata = ir.assembly_metadata;
   projectId ||= text(metadata?.project_id);
-  const revisionValue = author.revision ?? metadata?.revision;
+  const revisionValue = author.revision ?? author.compile_revision ?? metadata?.revision ?? metadata?.compile_revision;
   revision ||= revisionValue === undefined ? undefined : String(revisionValue);
   const artifacts = readArtifacts(root.artifacts !== undefined ? root.artifacts : ir.artifacts, 'artifacts');
   const project: FormProject = { projectId: projectId || undefined, revision,
-    agent: text(author.agent ?? ir.agent ?? metadata?.source_agent ?? metadata?.agent) || undefined,
+    agent: text(author.agent ?? author.authoring_agent ?? ir.agent ?? metadata?.source_agent ?? metadata?.agent ?? metadata?.authoring_agent) || undefined,
     hardwareIrVersion: version.split(' / ')[0], ir, source, sourceDocument, artifacts };
   return {
     name: text(root.title, text(ir.overview?.title, filename.replace(/\.json$/i, ''))),
@@ -167,7 +167,7 @@ export function importForm(input: unknown, filename: string, digest: string): As
       geometry.dispose();
       warnings.push('Only overall dimensions are available. Showing an approximate envelope.');
     }
-    if (doc.cad) warnings.push('Referenced CAD is unavailable or unsupported. Select its STEP file together with the JSON to resolve local geometry.');
+    if (doc.cad && !meshes?.length) warnings.push('Referenced CAD is unavailable or unsupported. Select its STEP file together with the JSON to resolve local geometry.');
   }
   if (!parts.length) throw new Error('This Form project has no usable geometry. Include its referenced STEP file, inline CAD meshes, or mechanical placements.');
   const hierarchy = { id: `${id}/root`, name: doc.name, partIds: [], children: parts.map(part => ({ id: part.id, name: part.name, partIds: [part.id], children: [] })) };
