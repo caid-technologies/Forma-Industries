@@ -1,53 +1,13 @@
 #!/usr/bin/env node
 import { createServer } from 'node:http';
-import { existsSync, readFileSync, mkdirSync, writeFileSync, chmodSync } from 'node:fs';
-import { homedir, platform } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { platform } from 'node:os';
+import { dirname, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { createClient } from '@supabase/supabase-js';
+import { configPath, client, sessionClient, writeAuth } from './session.mjs';
 
 const REDIRECT_URL = process.env.ASTRA_CLI_REDIRECT_URL || 'http://127.0.0.1:54331/callback';
-const configPath = process.env.ASTRA_CLI_CONFIG || join(process.env.APPDATA || join(homedir(), '.config'), 'Astra', 'auth.json');
-
-function loadEnv() {
-  for (const file of ['.env', '.env.local']) {
-    if (!existsSync(file)) continue;
-    for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
-      const match = line.match(/^\s*([A-Z][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
-      if (!match || process.env[match[1]]) continue;
-      process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '');
-    }
-  }
-}
-function requiredEnv(name) {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`Set ${name} before using the Astra CLI.`);
-  return value;
-}
-function readAuth() {
-  try { return JSON.parse(readFileSync(configPath, 'utf8')); } catch { return null; }
-}
-function writeAuth(session) {
-  mkdirSync(dirname(configPath), { recursive: true });
-  writeFileSync(configPath, JSON.stringify(session, null, 2) + '\n', 'utf8');
-  if (platform() !== 'win32') chmodSync(configPath, 0o600);
-}
-function client() {
-  loadEnv();
-  return createClient(requiredEnv('VITE_SUPABASE_URL'), requiredEnv('VITE_SUPABASE_PUBLISHABLE_KEY'), {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: 'pkce' },
-  });
-}
-async function sessionClient() {
-  const stored = readAuth();
-  if (!stored?.access_token || !stored?.refresh_token) throw new Error(`Sign in first with "astra auth login". Expected ${configPath}.`);
-  const supabase = client();
-  const { data, error } = await supabase.auth.setSession({ access_token: stored.access_token, refresh_token: stored.refresh_token });
-  if (error || !data.session) throw new Error(`Astra session expired. Run "astra auth login" again.${error ? ` ${error.message}` : ''}`);
-  if (data.session.refresh_token !== stored.refresh_token || data.session.access_token !== stored.access_token) writeAuth(data.session);
-  return { supabase, session: data.session };
-}
 function openBrowser(url) {
   if (platform() === 'win32') spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref();
   else spawn(platform() === 'darwin' ? 'open' : 'xdg-open', [url], { detached: true, stdio: 'ignore' }).unref();
@@ -112,7 +72,6 @@ async function exportRoom(id, path) {
 }
 async function importRoom(path, name) {
   const { supabase } = await sessionClient(); const document = cloudDocument(readJson(path));
-  if (document.assets.some(asset => asset.source.kind === 'generated')) throw new Error('Generated architecture is local-only. Open the portable scene JSON in the browser workbench instead.');
   const { data: userData, error: userError } = await supabase.auth.getUser(); if (userError || !userData.user) throw new Error('Astra account could not be read.');
   const assets = (document.assets || []).map(asset => ({ owner_id: userData.user.id, asset_key: asset.id, name: asset.name, source_kind: asset.source.kind, metadata: { dimensions: asset.dimensions, source: asset.source } }));
   if (assets.length) { const result = await supabase.from('assets').upsert(assets, { onConflict: 'owner_id,asset_key' }); if (result.error) throw new Error(result.error.message); }

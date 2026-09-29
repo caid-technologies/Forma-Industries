@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
-import { createInterface } from 'node:readline';
 import { callRoomTool, roomTools } from './mcp-rooms.mjs';
+import { sceneTools } from './mcp-scene-contract.mjs';
+
+let sceneRuntime;
+async function sceneModule() {
+  sceneRuntime ??= import('tsx/esm/api').then(({ tsImport }) => tsImport('./mcp-scenes.ts', import.meta.url));
+  return sceneRuntime;
+}
 
 const root = resolve(process.env.ASTRA_ROOT || process.cwd());
 const json = path => JSON.parse(readFileSync(path, 'utf8'));
@@ -19,6 +25,7 @@ const textResult = value => ({ content: [{ type: 'text', text: JSON.stringify(va
 
 const tools = [
   ...roomTools,
+  ...sceneTools,
   { name: 'astra.read_animation_feedback', description: 'Read the latest scrubbed Astra authored-animation review for Forma iteration.', inputSchema: { type: 'object', properties: {} } },
   { name: 'astra.read_forma_project', description: 'Read a local compiled Forma project manifest from the Astra checkout.', inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'Checkout-relative path, usually demo/forma-project.json.' } } } },
   { name: 'astra.save_forma_project', description: 'Save a Forma MCP project_ir back into an existing compiled project manifest.', inputSchema: { type: 'object', properties: { path: { type: 'string' }, project_ir: { type: 'object' } }, required: ['path', 'project_ir'] } },
@@ -26,7 +33,8 @@ const tools = [
   { name: 'astra.write_space_brief', description: 'Record a space requirement for the Astra local demo planner.', inputSchema: { type: 'object', properties: { kind: { type: 'string', enum: ['biofab', 'manufacturing', 'maker'] }, requirements: { type: 'string' } }, required: ['kind', 'requirements'] } },
 ];
 
-function callTool(name, args = {}) {
+async function callTool(name, args = {}) {
+  if (sceneTools.some(tool => tool.name === name)) return (await sceneModule()).callSceneTool(root, name, args);
   if (roomTools.some(tool => tool.name === name)) return callRoomTool(root, name, args);
   if (name === 'astra.read_animation_feedback') {
     const path = localPath('.astra/feedback/latest.json');
@@ -68,13 +76,42 @@ async function handle(request) {
   if (request.method === 'ping') return response(request.id, {});
   if (request.method === 'tools/list') return response(request.id, { tools });
   if (request.method === 'tools/call') {
-    try { return response(request.id, textResult(callTool(request.params?.name, request.params?.arguments))); }
-    catch (error) { return response(request.id, { content: [{ type: 'text', text: error.message }], isError: true }); }
+    try { return response(request.id, textResult(await callTool(request.params?.name, request.params?.arguments))); }
+    catch (error) {
+      if (sceneTools.some(tool => tool.name === request.params?.name)) {
+        const known = error?.name === 'SceneToolError';
+        return response(request.id, { ...textResult({ error: { code: known ? error.code : 'OPERATION_FAILED', message: known ? error.message : 'Scene tool could not start. Check local installation and configuration.', ...(known ? error.details : {}) } }), isError: true });
+      }
+      return response(request.id, { content: [{ type: 'text', text: error.message }], isError: true });
+    }
   }
   return errorResponse(request.id, `Unsupported MCP method: ${request.method}`);
 }
 
-createInterface({ input: process.stdin, crlfDelay: Infinity }).on('line', line => {
-  try { const request = JSON.parse(line); void handle(request).then(result => { if (result) process.stdout.write(JSON.stringify(result) + '\n'); }); }
-  catch (error) { process.stdout.write(JSON.stringify(errorResponse(null, error.message)) + '\n'); }
+// Bound memory before parsing and serialize account refreshes and writes. Local
+// project handoffs keep their existing 10 MiB limit; scene arguments cap at 1 MiB.
+const LINE_LIMIT = 11 * 1024 * 1024;
+let buffer = '', dropping = false, pending = 0, queue = Promise.resolve();
+const send = value => process.stdout.write(JSON.stringify(value) + '\n');
+function line(value) {
+  let request;
+  try { request = JSON.parse(value); if (!request || typeof request !== 'object' || Array.isArray(request)) throw new Error(); }
+  catch { send(errorResponse(null, 'Invalid JSON-RPC request.')); return; }
+  if (pending >= 8) { if (Object.hasOwn(request, 'id')) send(errorResponse(request.id, 'Server busy. Retry after outstanding requests finish.')); return; }
+  pending++;
+  queue = queue.then(() => handle(request)).then(result => { if (result) send(result); }, () => send(errorResponse(request.id ?? null, 'MCP request failed.'))).finally(() => { pending--; });
+}
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', chunk => {
+  for (const [i, part] of chunk.split('\n').entries()) {
+    if (i) {
+      if (!dropping && buffer.trim()) line(buffer);
+      buffer = ''; dropping = false;
+    }
+    if (dropping) continue;
+    if (Buffer.byteLength(buffer) + Buffer.byteLength(part) > LINE_LIMIT) {
+      buffer = ''; dropping = true; send(errorResponse(null, 'MCP request exceeds 11 MiB.'));
+    } else buffer += part;
+  }
 });
+process.stdin.on('end', () => { if (!dropping && buffer.trim()) line(buffer); });

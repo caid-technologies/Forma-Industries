@@ -37,7 +37,7 @@ You can import, edit, animate, and export locally without signing in. Optional c
 | Export a visual review | Render GIFs of a room, a floor section, or a selected asset, with companion JSON recording spatial and animation context. |
 | Reuse equipment | Save geometry and previews in a device asset library and add them to another layout. |
 | Save and reopen | Export portable scene JSON, restore local drafts, or explicitly save named cloud scenes after signing in. |
-| Work with agents locally | Use optional Forma/OpenCode/MCP workflows to create equipment, create rooms, and hand animation feedback back to Forma. |
+| Work with agents locally | Use optional Forma/MCP workflows to author equipment, create or revise saved scenes from an external agent, and return animation feedback to Forma. |
 
 ## How Forma and Astra work together
 
@@ -102,7 +102,7 @@ Copy [`.env.example`](.env.example) to `.env` when you need configuration. Resta
 | GitHub sign-in and cloud scenes | Configure Supabase Auth/Postgres and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. See [Auth/database setup](supabase/README.md). |
 | Private cloud geometry and GIFs | Apply the storage migrations and set `VITE_CLOUD_STORAGE_ENABLED=true`. See the [storage guide](docs/cloud-storage.md). |
 | Hide local generation controls | Set `VITE_FORMA_GENERATION_ENABLED=false` if you generate equipment separately and only need to import it. |
-| Local agents and CLI | See [OpenCode/MCP setup](docs/development.md#optional-forma-mcp-demo), [room creation through MCP](docs/development.md#create-rooms-through-mcp), and the [Astra CLI](docs/development.md#astra-cli). |
+| Local agents and CLI | See [OpenCode/MCP setup](docs/development.md#optional-forma-mcp-demo), [scene authoring through MCP](docs/mcp-scenes.md), and the [Astra CLI](docs/development.md#astra-cli). |
 
 Only public Supabase browser configuration belongs in `VITE_` variables. Provider credentials and Supabase service-role keys must stay out of the browser bundle.
 
@@ -140,6 +140,7 @@ npm run test:cad
 npm run test:scene
 npm run test:workspace
 npm run test:mcp
+npm run test:mcp-scenes
 ```
 
 For browser smoke tests, run `npm start` in another terminal after building, then run `npm test`, `npm run test:gif`, or `npm run test:fullscreen`. These need Chrome. The main `npm test` suite also needs the Python Forma installation and network access for a STEP fixture; the GIF suite does not need those two dependencies. Screenshots go to `test-results/`.
@@ -150,6 +151,7 @@ Live cloud tests need a dedicated Supabase test project and test-only credential
 
 - [Workspace guide](docs/workspace.md) — editing, animation, persistence, missing-geometry recovery, and the inspector.
 - [Forma handoff contract](docs/forma-handoff.md) — compiled artifacts, supported formats, provenance, and CAD resolution.
+- [External-agent scene authoring](docs/mcp-scenes.md) — MCP setup, typed tools, revision URLs, and the deterministic cleanroom fixture.
 - [Development and integration guide](docs/development.md) — local generation, MCP, CLI, import contracts, and GIF details.
 - [Scene links](docs/scene-links.md) — private scene/revision URLs, expiring shared links, and deployment steps.
 - [Cloud storage guide](docs/cloud-storage.md) — private asset transfers, setup, limits, and lifecycle.

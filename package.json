@@ -10,7 +10,7 @@
     "test:camera-depth": "node --import tsx scripts/camera-depth-test.ts",
     "postinstall": "node scripts/prepare-vendor.mjs",
     "dev": "concurrently -k -n api,web \"node --env-file-if-exists=.env server/index.mjs\" \"vite --host 127.0.0.1\"",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && tsc --noEmit -p tsconfig.mcp.json && vite build",
     "start": "node --env-file-if-exists=.env server/index.mjs",
     "test": "node scripts/smoke.mjs",
     "test:e2e": "node scripts/smoke.mjs",
@@ -28,17 +28,21 @@
     "test:storage-disabled": "node scripts/cloud-storage-disabled-smoke.mjs",
     "test:fullscreen": "node scripts/fullscreen-smoke.mjs && node scripts/fullscreen-import-smoke.mjs",
     "test:scene-links": "node --import tsx scripts/scene-links-test.ts",
-    "test:scene-links-browser": "node --import tsx scripts/scene-links-browser-test.ts"
+    "test:scene-links-browser": "node --import tsx scripts/scene-links-browser-test.ts",
+    "test:mcp-scenes": "node --import tsx scripts/mcp-scenes-test.ts",
+    "test:mcp-scenes-browser": "node --import tsx scripts/mcp-scenes-test.ts --browser"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
+    "ajv": "^8.17.1",
     "express": "^5.1.0",
     "gifenc": "^1.0.3",
     "lucide-react": "^0.468.0",
     "occt-import-js": "0.0.23",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "tsx": "^4.20.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
@@ -51,7 +55,6 @@
     "concurrently": "^9.2.0",
     "omggif": "^1.0.10",
     "supabase": "2.117.0",
-    "tsx": "^4.20.0",
     "typescript": "^5.9.0",
     "vite": "^6.4.1"
   }

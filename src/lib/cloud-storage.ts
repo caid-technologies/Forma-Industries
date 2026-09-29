@@ -85,7 +85,6 @@ export class CloudStorage {
   }
   async upload(entry: LibraryEntry, progress: (text: string) => void, source?: File): Promise<CloudVersion> {
     const asset = scrubCloudData(entry.asset) as Asset;
-    if (asset.source.kind === 'generated') throw new Error('Generated architectural geometry is local-only and cannot be uploaded as a Forma or STEP asset.');
     if (asset.id.length > 256 || !asset.name.trim() || asset.name.length > 200) throw new Error('Asset ID/name exceeds cloud metadata limits.');
     const bundle = new Blob([JSON.stringify({ schemaVersion: 1, asset, previewMetadata: scrubCloudData(entry.previewMetadata) })], { type: 'application/json' });
     const binaries: { name: CloudFile['name']; blob: Blob }[] = [{ name: 'asset.json', blob: bundle }];

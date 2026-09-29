@@ -2,7 +2,7 @@
 
 ## Enable independently
 
-Apply migrations with `npx supabase db push`, then set `VITE_CLOUD_STORAGE_ENABLED=true` and rebuild. The flag defaults to **off** for new environments; Postgres/Auth and the IndexedDB library work independently. Astra's production flag is now enabled and its private bucket is provisioned.
+Apply migrations with `npx supabase db push`, then set `VITE_CLOUD_STORAGE_ENABLED=true` and rebuild. The flag defaults to **off** for new environments; Postgres/Auth and the IndexedDB library work independently. The workbench runs locally against your configured backend.
 
 The existing public `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are sufficient. Users sign in with GitHub. **No S3 keys or service-role keys belong in the browser.** Supabase Storage is S3-compatible; Astra uses its authenticated Storage API against the same bucket, with the user's JWT and storage policies. A direct S3 signing service is unnecessary for this browser workflow. If a future backend uses the S3 protocol, configure its credentials server-side and re-evaluate its access boundary; privileged S3 access may bypass these user policies.
 
@@ -17,6 +17,8 @@ For a local Supabase stack, explicitly enable `[storage]` and `[storage.s3_proto
 5. **Remove cloud copy** removes that immutable version's files and file metadata. It does not delete local library entries, room instances, or the core asset metadata row. Changed geometry/preview/source attachments create new versions; exact retries reuse the existing version.
 
 The full original binary STEP is currently attachable for standalone STEP assets. Forma geometry and retained compiled data are preserved in the JSON bundle; resolving/uploading additional companion source artifacts belongs to the fuller artifact pipeline (#20). This is not automatic room/animation cloud persistence (#27).
+
+Generated architectural assets tagged with generator `forma-industries` are supported after migration `20260929100000_generated_scene_assets.sql`. They retain source kind `generated`; upload validation rejects unsupported generated provenance. This enables the complete bundled cleanroom to reopen through an [MCP-authored scene URL](mcp-scenes.md).
 
 ## Data contract and lifecycle
 
