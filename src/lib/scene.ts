@@ -30,12 +30,16 @@ export type FormaProject = {
   sourceDocument?: Record<string, unknown>;
   artifacts?: Record<string, unknown>[];
 };
+export type AssetSource =
+  | { kind: 'forma'; filename: string; digest: string; projectId?: string; version?: string }
+  | { kind: 'step'; filename: string; digest: string; projectId?: never; version?: never }
+  | { kind: 'generated'; filename: string; digest: string; generator: 'forma-industries'; projectId?: never; version?: never };
 
 export type Asset = {
   schemaVersion: 1;
   id: string;
   name: string;
-  source: { kind: 'forma' | 'step'; filename: string; digest: string; projectId?: string; version?: string };
+  source: AssetSource;
   units: 'm';
   upAxis: 'Y';
   parts: Part[];

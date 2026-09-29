@@ -49,7 +49,9 @@ export function WorkspaceViewer(props: Props) {
           const center = box.getCenter(new THREE.Vector3()); const size = Math.max(box.getSize(new THREE.Vector3()).length(),.01);
           controls.target.copy(center); camera.position.copy(center).add(new THREE.Vector3(size*1.3,size*.9,size*1.3));
         } else {
-          controls.target.set(0,0,0); camera.position.set(workspace.room[0]*.9,Math.max(...workspace.room)*.75,workspace.room[1]*.9);
+          controls.target.set(0,0,0);
+          const generatedArchitecture = p.workspace.items.some(item => item.asset.source.kind === 'generated');
+          camera.position.set(workspace.room[0] * (generatedArchitecture ? .35 : .9), Math.max(...workspace.room) * (generatedArchitecture ? 1.35 : .75), workspace.room[1] * (generatedArchitecture ? .35 : .9));
         }
       }
       const regionKey = JSON.stringify(region);

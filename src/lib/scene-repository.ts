@@ -12,6 +12,7 @@ export class SceneRepository {
     if(error)throw new Error(error.message);return data;
   }
   async saveMetadata(assets: Asset[]) {
+    if (assets.some(asset => asset.source.kind === 'generated')) throw new Error('Generated architecture is local-only. Export a portable scene JSON to preserve its geometry.');
     const rows=[...new Map(assets.map(asset=>[asset.id,{owner_id:this.owner,asset_key:asset.id,name:asset.name,source_kind:asset.source.kind,metadata:scrubCloudData({dimensions:asset.dimensions,source:asset.source})}])).values()];
     if(!rows.length)return;
     const {error}=await this.client.from('assets').upsert(rows,{onConflict:'owner_id,asset_key'});if(error)throw new Error(error.message);

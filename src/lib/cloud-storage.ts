@@ -25,8 +25,9 @@ export function parseCloudBundle(text: string): LibraryEntry {
   try { bundle = JSON.parse(text); } catch { throw new Error('Cloud geometry is not valid JSON. Re-upload the original asset.'); }
   const asset = bundle?.asset as Asset;
   if (bundle?.schemaVersion !== 1 || asset?.schemaVersion !== 1 || asset.units !== 'm' || asset.upAxis !== 'Y'
-      || typeof asset.id !== 'string' || typeof asset.name !== 'string' || !['forma', 'step'].includes(asset.source?.kind)
+      || typeof asset.id !== 'string' || typeof asset.name !== 'string' || !['forma', 'step', 'generated'].includes(asset.source?.kind)
       || typeof asset.source.filename !== 'string' || typeof asset.source.digest !== 'string'
+      || (asset.source.kind === 'generated' && asset.source.generator !== 'forma-industries')
       || !Array.isArray(asset.parts) || !Array.isArray(asset.warnings) || !asset.warnings.every(w => typeof w === 'string')
       || !Array.isArray(asset.originOffset) || asset.originOffset.length !== 3 || !asset.originOffset.every(Number.isFinite)) {
     throw new Error('Unsupported or incomplete cloud asset bundle.');
@@ -84,6 +85,7 @@ export class CloudStorage {
   }
   async upload(entry: LibraryEntry, progress: (text: string) => void, source?: File): Promise<CloudVersion> {
     const asset = scrubCloudData(entry.asset) as Asset;
+    if (asset.source.kind === 'generated') throw new Error('Generated architectural geometry is local-only and cannot be uploaded as a Forma or STEP asset.');
     if (asset.id.length > 256 || !asset.name.trim() || asset.name.length > 200) throw new Error('Asset ID/name exceeds cloud metadata limits.');
     const bundle = new Blob([JSON.stringify({ schemaVersion: 1, asset, previewMetadata: scrubCloudData(entry.previewMetadata) })], { type: 'application/json' });
     const binaries: { name: CloudFile['name']; blob: Blob }[] = [{ name: 'asset.json', blob: bundle }];

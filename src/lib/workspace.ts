@@ -88,7 +88,8 @@ export function readManifest(value: unknown): SceneManifest {
   const assetIds = new Set<string>();
   for (const asset of m.assets) {
     if (!validString(asset.id) || assetIds.has(asset.id) || !validString(asset.name) || !validVector(asset.dimensions) || asset.dimensions.some(n => n < 0)
-        || !asset.source || !['forma','step'].includes(asset.source.kind) || !validString(asset.source.filename) || !validString(asset.source.digest)
+        || !asset.source || !['forma','step','generated'].includes(asset.source.kind) || !validString(asset.source.filename) || !validString(asset.source.digest)
+        || (asset.source.kind === 'generated' && asset.source.generator !== 'forma-industries')
         || (asset.projectRevision !== undefined && !validString(asset.projectRevision))) throw new Error('Invalid or duplicate scene asset reference.');
     assetIds.add(asset.id);
   }
