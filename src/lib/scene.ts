@@ -13,13 +13,8 @@ export type AssetNode = { id: string; name: string; partIds: string[]; children:
 export type Instance = { id: string; assetId: string; name: string; position: Vec3 };
 export type Room = { width: number; depth: number; height: number; walls: boolean };
 
-export type FormComponent = { ref_des: string; part_definition_id?: string; name?: string; category?: string; [key: string]: unknown };
-export type FormIR = {
-  hardware_ir_version?: string; overview?: Record<string, unknown>; components?: FormComponent[];
-  part_definitions?: Record<string, unknown>[]; bom?: Record<string, unknown>[]; nets?: Record<string, unknown>[];
-  mechanical?: Record<string, unknown>; validation?: Record<string, unknown>; assembly?: unknown[];
-  assembly_metadata?: Record<string, unknown>; [key: string]: unknown;
-};
+import type { FormIR, FormArtifact } from './form-model';
+export type { FormIR, FormComponent } from './form-model';
 export type FormProject = {
   projectId?: string;
   revision?: string;
@@ -28,7 +23,7 @@ export type FormProject = {
   ir: FormIR;
   source: 'project_ir' | 'hardware_ir' | 'namespace' | 'raw_ir';
   sourceDocument?: Record<string, unknown>;
-  artifacts?: Record<string, unknown>[];
+  artifacts?: FormArtifact[];
 };
 export type AssetSource =
   | { kind: 'form'; filename: string; digest: string; projectId?: string; version?: string }

@@ -1,6 +1,8 @@
 import { BoxGeometry, Euler, Matrix4 } from 'three';
 import { finalizeAsset, type Asset, type FormProject, type Part, type Vec3 } from './scene';
 import { scrubCloudData } from './cloud-storage';
+import { objectRecord, readHardwareIR, readHardwareVersion, readArtifacts, readProvenance, readBOM,
+  type FormMechanical, type FormComponent, type FormPartDefinition, type FormArtifact } from './form-model';
 
 type RecordValue = Record<string, unknown>;
 export function record(value: unknown): RecordValue {
@@ -21,76 +23,74 @@ function vector(value: unknown, label: string, positive = false): Vec3 {
 }
 
 export type FormDocument = {
-  name: string; projectId?: string; version: string; mechanical: RecordValue;
-  cad: unknown; definitions: RecordValue[]; components: RecordValue[]; artifacts: RecordValue[]; project: FormProject;
+  name: string; projectId?: string; version: string; mechanical: FormMechanical;
+  cad: unknown; definitions: FormPartDefinition[]; components: FormComponent[]; artifacts: FormArtifact[]; project: FormProject;
 };
 
-function artifactRecords(value: unknown): RecordValue[] {
-  return Array.isArray(value) ? value.map(record).filter(item => typeof item.path === 'string') : [];
-}
-
 export function readFormDocument(input: unknown, filename: string): FormDocument {
-  let root = record(scrubCloudData(structuredClone(input)));
-  const sourceDocument = root;
-  if (Object.keys(root).length === 0) throw new Error('Expected a Form project JSON object.');
-  if (root.response) root = record(root.response);
-  if (root.format && root.format !== 'form-project') throw new Error(`Unsupported project format: ${root.format}`);
-  if (root.format === 'form-project' && root.version !== 1) throw new Error(`Unsupported Form manifest version: ${root.version}. Expected 1.`);
-  const object = record(root.project_object ?? (root.object_type ? root : undefined));
-  let ir = record(root.project_ir ?? root.hardware_ir ?? root);
-  let source: FormProject['source'] = root.project_ir ? 'project_ir' : root.hardware_ir ? 'hardware_ir' : 'raw_ir';
+  const sourceDocument = objectRecord(scrubCloudData(structuredClone(input)), 'document');
+  let root = sourceDocument;
+  if (!Object.keys(root).length) throw new Error('Expected a Form project JSON object.');
+  if (root.response !== undefined) root = objectRecord(root.response, 'response');
+  if (root.format !== undefined && (typeof root.format !== 'string' || !['form-project', 'forma-project'].includes(root.format))) {
+    throw new Error(`Unsupported project format: ${root.format}. Expected form-project or forma-project.`);
+  }
+  if (root.format !== undefined && root.version !== 1) throw new Error(`Unsupported Form manifest version: ${root.version}. Expected 1.`);
+  if (root.format !== undefined && root.project_ir === undefined && root.hardware_ir === undefined && root.project_object === undefined && root.object_type === undefined) {
+    throw new Error('Form manifest is missing project_ir, hardware_ir, or project_object. Import the compiled project artifact.');
+  }
+  const author = readProvenance(root, 'document');
+  const wrappedIR = root.project_ir !== undefined ? 'project_ir' : root.hardware_ir !== undefined ? 'hardware_ir' : undefined;
+  let source: FormProject['source'] = wrappedIR ?? 'raw_ir';
+  let rawIR = wrappedIR ? objectRecord(root[wrappedIR], wrappedIR) : root;
   let revision: string | undefined;
-  let projectId = text(root.project_id);
+  let projectId = text(author.project_id);
   let version: string;
-  if (Object.keys(object).length && !root.project_ir && !root.hardware_ir) {
-    if (object.object_type !== 'form.project') throw new Error('Unsupported project object type. Expected form.project.');
-    // Form object/namespace versions are revision counters, not schema versions.
-    if (!Number.isInteger(object.version) || Number(object.version) < 1) throw new Error('Invalid Form project revision.');
+  if (!wrappedIR && (root.project_object !== undefined || root.object_type !== undefined)) {
+    const object = objectRecord(root.project_object !== undefined ? root.project_object : root, 'project_object');
+    if (typeof object.object_type !== 'string' || !['form.project', 'forma.project'].includes(object.object_type)) throw new Error('Unsupported project object type. Expected form.project or forma.project.');
+    // Object versions identify source revisions, not Hardware IR schemas.
+    if (!Number.isSafeInteger(object.version) || Number(object.version) < 1) throw new Error('Invalid Form project revision. Expected a positive integer.');
+    if (object.object_id !== undefined && typeof object.object_id !== 'string') throw new Error('Invalid Form project_object.object_id: expected a string.');
     if (!Array.isArray(object.namespaces)) throw new Error('Form project namespaces must be an array.');
-    const namespaces = object.namespaces.map(record);
-    if (new Set(namespaces.map(n=>n.name)).size !== namespaces.length) throw new Error('Duplicate Form namespace name.');
-    const payload = (name: string) => record(namespaces.find(n => n.name === name)?.payload);
-    const meta = payload('project.meta');
-    const schema = text(meta.hardware_ir_version, '0.2');
-    if (!['0.1', '0.2'].includes(schema)) throw new Error(`Unsupported Hardware IR version: ${schema}. Expected 0.1 or 0.2.`);
-    ir = { ...payload('project.meta'), ...payload('project.docs'), ...payload('product.overview'), ...payload('product.architecture'), ...payload('product.electrical'), ...payload('product.mech'), ...payload('product.assembly'), ...payload('product.validation') };
+    const namespaces = new Map<string, RecordValue>();
+    for (const [i, value] of object.namespaces.entries()) {
+      const namespace = objectRecord(value, `project_object.namespaces[${i}]`);
+      if (typeof namespace.name !== 'string' || !namespace.name.trim()) throw new Error(`Invalid Form project_object.namespaces[${i}].name: expected a non-empty string.`);
+      if (namespaces.has(namespace.name)) throw new Error(`Duplicate Form namespace name: ${namespace.name}`);
+      namespaces.set(namespace.name, objectRecord(namespace.payload, `project_object.namespaces[${i}].payload`));
+    }
+    const payload = (name: string) => namespaces.get(name) ?? {};
+    const schema = readHardwareVersion(payload('project.meta').hardware_ir_version, '0.2', 'project.meta.hardware_ir_version');
+    rawIR = { ...payload('project.meta'), ...payload('project.docs'), ...payload('product.overview'), ...payload('product.architecture'), ...payload('product.electrical'), ...payload('product.mech'), ...payload('product.assembly'), ...payload('product.validation') };
     const bom = payload('product.bom');
-    if (Array.isArray(bom.line_items) || Array.isArray(bom.bom)) ir.bom = bom.line_items ?? bom.bom;
-    ir.hardware_ir_version = schema;
+    if (bom.line_items !== undefined) rawIR.bom = readBOM(bom.line_items, 'product.bom.line_items');
+    else if (bom.bom !== undefined) rawIR.bom = readBOM(bom.bom, 'product.bom.bom');
+    rawIR.hardware_ir_version = schema;
     source = 'namespace';
     projectId = text(object.object_id);
     revision = String(object.version);
     version = `${schema} / revision ${object.version}`;
   } else {
-    version = text(ir.hardware_ir_version, '0.1');
-    if (!['0.1', '0.2'].includes(version)) throw new Error(`Unsupported Hardware IR version: ${version}. Expected 0.1 or 0.2.`);
+    version = readHardwareVersion(rawIR.hardware_ir_version, '0.1', `${source}.hardware_ir_version`);
   }
-  const metadata = record(ir.assembly_metadata);
-  const overview = record(ir.overview);
-  for (const field of ['overview','mechanical','validation','assembly_metadata']) {
-    if (ir[field] !== undefined && ir[field] !== null && (typeof ir[field] !== 'object' || Array.isArray(ir[field]))) throw new Error(`Form ${field} must be an object.`);
-  }
-  for (const field of ['components','part_definitions','bom','nets']) {
-    if (ir[field] !== undefined && (!Array.isArray(ir[field]) || (ir[field] as unknown[]).some(v=>!v||typeof v!=='object'||Array.isArray(v)))) throw new Error(`Form ${field} must be an array of records.`);
-  }
-  const refs = new Set<string>();
-  for (const component of (Array.isArray(ir.components)?ir.components:[]).map(record)) {
-    if (!text(component.ref_des) || refs.has(String(component.ref_des))) throw new Error(`Duplicate or missing Form component ref_des: ${component.ref_des}`);
-    refs.add(String(component.ref_des));
-  }
-  projectId ||= text(metadata.project_id);
-  const revisionValue = root.revision ?? metadata.revision;
-  revision ||= typeof revisionValue === 'number' || typeof revisionValue === 'string' ? String(revisionValue) : undefined;
-  const artifacts = artifactRecords(root.artifacts ?? ir.artifacts);
-  const project: FormProject = { projectId: projectId || undefined, revision, agent: text(root.agent ?? ir.agent ?? metadata.source_agent ?? metadata.agent) || undefined, hardwareIrVersion: version.split(' / ')[0], ir, source, sourceDocument, artifacts };
+  const ir = readHardwareIR(rawIR, source);
+  const metadata = ir.assembly_metadata;
+  projectId ||= text(metadata?.project_id);
+  const revisionValue = author.revision ?? metadata?.revision;
+  revision ||= revisionValue === undefined ? undefined : String(revisionValue);
+  const artifacts = readArtifacts(root.artifacts !== undefined ? root.artifacts : ir.artifacts, 'artifacts');
+  const project: FormProject = { projectId: projectId || undefined, revision,
+    agent: text(author.agent ?? ir.agent ?? metadata?.source_agent ?? metadata?.agent) || undefined,
+    hardwareIrVersion: version.split(' / ')[0], ir, source, sourceDocument, artifacts };
   return {
-    name: text(root.title, text(overview.title, filename.replace(/\.json$/i, ''))),
-    projectId: projectId || text(metadata.project_id) || undefined,
+    name: text(root.title, text(ir.overview?.title, filename.replace(/\.json$/i, ''))),
+    projectId: projectId || undefined,
     version,
-    mechanical: record(ir.mechanical),
+    mechanical: ir.mechanical ?? {},
     cad: ir.cad_model,
-    definitions: Array.isArray(ir.part_definitions) ? ir.part_definitions.map(record) : [],
-    components: Array.isArray(ir.components) ? ir.components.map(record) : [], artifacts, project,
+    definitions: ir.part_definitions ?? [],
+    components: ir.components ?? [], artifacts, project,
   };
 }
 
@@ -120,14 +120,6 @@ export function importForm(input: unknown, filename: string, digest: string): As
   const parts: Part[] = [];
   const warnings: string[] = [];
   const placements = doc.mechanical.component_placements;
-  if (placements !== undefined && !Array.isArray(placements)) throw new Error('Mechanical component_placements must be an array.');
-  const placementRefs = new Set<string>();
-  for (const value of Array.isArray(placements) ? placements : []) {
-    const ref = text(record(value).ref_des);
-    if (!ref || placementRefs.has(ref)) throw new Error(`Duplicate or missing mechanical ref_des: ${ref}`);
-    if (doc.components.length && !doc.components.some(c=>c.ref_des===ref)) throw new Error(`Unknown component ref_des in mechanical placement: ${ref}`);
-    placementRefs.add(ref);
-  }
   const represented = new Set<string>();
   const meshes = meshRecords(doc.cad);
   if (meshes?.length) {
@@ -143,29 +135,27 @@ export function importForm(input: unknown, filename: string, digest: string): As
         indices: mesh.faces.map(v => finite(v, 'CAD face')), metadata: { representation: 'CAD mesh', ref, sourceId: text(mesh.shapeId ?? mesh.shape_id ?? mesh.id) } });
     }
   }
-  if (!meshes?.length || (represented.size > 0 && Array.isArray(placements) && placements.some(p=>!represented.has(String(record(p).ref_des))))) {
-    if (placements !== undefined && !Array.isArray(placements)) throw new Error('Mechanical component_placements must be an array.');
+  if (!meshes?.length || (represented.size > 0 && Array.isArray(placements) && placements.some(p=>!represented.has(p.ref_des)))) {
     if (Array.isArray(placements) && placements.length) {
-      for (const value of placements) {
-        const item = record(value);
+      for (const item of placements) {
         const ref = text(item.ref_des);
         if (represented.has(ref)) continue;
         if (!ref) throw new Error('Each mechanical placement needs a ref_des.');
-        const component = doc.components.find(c => c.ref_des === ref) ?? {};
-        const definition = doc.definitions.find(d => d.part_definition_id === component.part_definition_id) ?? component;
+        const component = doc.components.find(c => c.ref_des === ref);
+        const definition = doc.definitions.find(d => d.part_definition_id === component?.part_definition_id) ?? component;
         const size = vector(item.size, `${ref} size`, true);
         const position = vector(item.position, `${ref} position`);
-        const rotation = record(item.orientation_deg);
-        const angles = ['x_deg', 'y_deg', 'z_deg'].map(key => finite(rotation[key] ?? 0, `${ref} ${key}`) * Math.PI / 180);
+        const rotation = item.orientation_deg ?? {};
+        const angles = (['x_deg', 'y_deg', 'z_deg'] as const).map(key => finite(rotation[key] ?? 0, `${ref} ${key}`) * Math.PI / 180);
         const geometry = new BoxGeometry(...size);
         geometry.applyMatrix4(new Matrix4().makeRotationFromEuler(new Euler(angles[0], angles[1], angles[2], 'XYZ')));
         geometry.translate(...position);
         geometry.rotateX(-Math.PI / 2);
         geometry.scale(0.001, 0.001, 0.001);
-        parts.push({ id: `${id}/placement/${ref}`, name: text(item.label, text(definition.name, ref)),
+        parts.push({ id: `${id}/placement/${ref}`, name: text(item.label, text(definition?.name, ref)),
           vertices: Array.from(geometry.attributes.position.array), indices: Array.from(geometry.index!.array),
-          metadata: { ref, category: text(item.category, text(definition.category)), layer: text(item.layer),
-            partNumber: text(definition.part_number), representation: 'Approximate component envelope' } });
+          metadata: { ref, category: text(item.category, text(definition?.category)), layer: text(item.layer),
+            partNumber: text(definition?.part_number), representation: 'Approximate component envelope' } });
         geometry.dispose();
       }
       warnings.push('Showing approximate component envelopes from Form mechanical placements, not fabrication-ready CAD surfaces.');
