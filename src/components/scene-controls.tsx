@@ -2,8 +2,10 @@ import { useEffect,useRef,useState } from 'react';
 import { cloudStorageEnabled,connectUserClient } from '../lib/cloud-session';
 import { SceneRepository,type SavedScene,type AssetRow } from '../lib/scene-repository';
 import { sceneURLs } from '../lib/scene-links';
+import { SceneHistory } from './scene-history';
+import { SceneConflictError } from '../lib/scene-history';
 import { listLibrary } from '../lib/library';
-import { canonicalJSON,emptyWorkspace,makeManifest,type Workspace } from '../lib/workspace';
+import { canonicalJSON,emptyWorkspace,makeManifest,sceneContent,type Workspace } from '../lib/workspace';
 
 export function SceneControls({workspace,owner,roomId,setRoomId,current,setCurrent,replace,busy,setBusy,onExport}: {
   workspace:Workspace;owner:string|null;roomId:string;setRoomId:(value:string)=>void;current:SavedScene|null;setCurrent:(value:SavedScene|null)=>void;
@@ -27,7 +29,7 @@ export function SceneControls({workspace,owner,roomId,setRoomId,current,setCurre
   async function run(work:(repo:SceneRepository,token:number)=>Promise<void>){
     if(!owner||busy)return;const token=++operation.current;const sessionEpoch=epoch.current;setBusy(true);setError('');setRetry(null);
     try{await work(new SceneRepository(await connectUserClient(owner),owner,cloudStorageEnabled),sessionEpoch);}
-    catch(e){if(active.current&&sessionEpoch===epoch.current&&token===operation.current){const message=(e as Error).message;setError(message);setRetry({label:'Retry last cloud action',run:()=>void run(work)});}}
+    catch(e){if(active.current&&sessionEpoch===epoch.current&&token===operation.current){const message=(e as Error).message;setError(message);if(!(e instanceof SceneConflictError))setRetry({label:'Retry last cloud action',run:()=>void run(work)});}}
     finally{if(active.current&&sessionEpoch===epoch.current&&token===operation.current)setBusy(false);}
   }
   function confirmSwitch(action:string){return !dirty||window.confirm(`This room has unsaved changes. ${action} and discard them?`);}
@@ -52,13 +54,28 @@ export function SceneControls({workspace,owner,roomId,setRoomId,current,setCurre
   }
   function openScene(scene:SavedScene){
     if(!confirmSwitch('Open this room'))return;
-    void run(async(repo,token)=>{const local=await listLibrary();const result=await repo.open(scene.id,[...workspace.items.filter(i=>!i.missing).map(i=>i.asset),...local.map(e=>e.asset)],text=>{if(valid(token))setMessage(text);});if(!valid(token))return;replace(result.workspace);setCurrent(result.scene);setRoomId(result.scene.id);setName(result.scene.name);setMessage(result.workspace.items.some(i=>i.missing)?'Scene opened with missing geometry. Reimport matching source files.':'Cloud scene opened.');});
+    void run(async(repo,token)=>{const local=await listLibrary();const result=await repo.open(scene.id,[...workspace.items.filter(i=>!i.missing).map(i=>i.asset),...local.map(e=>e.asset)],text=>{if(valid(token))setMessage(text);});if(!valid(token))return;replace(result.workspace);setCurrent(result.scene);setRoomId(result.scene.id);setName(result.scene.name);setMessage(result.workspace.items.some(i=>i.missing)?'Scene opened with unavailable geometry. Retrieve exact pinned versions; unversioned assets can be reimported.':'Cloud scene opened.');});
+  }
+  function restoreRevision(revision:number,baseRevision:number){
+    if(!current)return;
+    const id=current.id;
+    if(!window.confirm(`Restore revision ${revision} as a new head based on revision ${baseRevision}?${dirty?' This replaces your unsaved local edits. Export or save them first if you need to keep them.':''} Existing saved revisions will remain unchanged.`))return;
+    const writeId=crypto.randomUUID();
+    void run(async(repo,token)=>{
+      const restored=await repo.restore(id,revision,baseRevision,writeId);
+      const local=await listLibrary();
+      const result=await repo.open(id,[...workspace.items.filter(item=>!item.missing).map(item=>item.asset),...local.map(entry=>entry.asset)],()=>{},restored.revision);
+      const rows=await repo.list();
+      if(!valid(token))return;
+      replace(result.workspace);setCurrent(result.scene);setRoomId(id);setName(result.scene.name);setScenes(rows);
+      setMessage(`Restored revision ${revision} as revision ${restored.revision}.${result.workspace.items.some(item=>item.missing)?' Some exact geometry is unavailable.':''}`);
+    });
   }
   function duplicateScene(scene:SavedScene){void run(async(repo,token)=>{const duplicate=await repo.duplicate(scene,`${scene.name} copy`);const local=await listLibrary();const result=await repo.open(duplicate.id,[...workspace.items.filter(i=>!i.missing).map(i=>i.asset),...local.map(e=>e.asset)],()=>{});if(!valid(token))return;replace(result.workspace);setCurrent(result.scene);setRoomId(result.scene.id);setName(result.scene.name);setScenes(await repo.list());setMessage('Room duplicated.');});}
   function deleteScene(scene:SavedScene){if(!window.confirm(`Delete ${scene.name}? Shared geometry and other rooms remain.`))return;void run(async(repo,token)=>{await repo.remove(scene);const rows=await repo.list();if(valid(token)){setScenes(rows);if(current?.id===scene.id){setCurrent(null);setRoomId(crypto.randomUUID());replace(emptyWorkspace());setName('Untitled room');}setMessage('Room deleted; shared cloud files retained.');}});}
   function deleteMetadata(asset:AssetRow){if(!window.confirm(`Delete cloud metadata for ${asset.name}? Binary versions must be removed first.`))return;void run(async(repo,token)=>{await repo.deleteMetadata(asset.asset_key);if(!valid(token))return;setCatalog((rows)=>rows.filter(row=>row.asset_key!==asset.asset_key));setMessage('Asset metadata deleted.');});}
   const urls=current?sceneURLs(current.id,current.revision,window.location.origin):null;
-  const dirty=current?canonicalJSON(current.document)!==canonicalJSON(makeManifest(workspace))||current.name!==name.trim():workspace.items.length>0;
+  const dirty=current?!current.document||canonicalJSON(sceneContent(current.document))!==canonicalJSON(makeManifest(workspace))||current.name!==name.trim():workspace.items.length>0;
   return <section aria-label="Scene persistence">
     <div className="eyebrow">SCENES / POSTGRES</div>
     <p>{current?`Cloud revision ${current.revision} · ${dirty?'Unsaved changes':'Saved'}`:'Local workspace · not saved to cloud'}</p>
@@ -90,10 +107,10 @@ export function SceneControls({workspace,owner,roomId,setRoomId,current,setCurre
             .catch(()=>setError('Copy failed. Select and copy the shared URL.'))}>Copy shared link</button>
         </>}
       </div>}
+      {current?.owner_id===owner&&<SceneHistory key={`${owner}:${current.id}:${current.revision}`} scene={current} owner={owner} busy={busy} restore={restoreRevision}/>}
       {scenes.map(scene=><div className={`saved-scene ${current?.id===scene.id?'active-scene':''}`} key={scene.id}><span><b>{scene.name}</b><br/><small>Revision {scene.revision} · {new Date(scene.updated_at).toLocaleString()}</small></span><div className="capture-actions"><button disabled={busy} aria-label={`Open scene ${scene.name}`} onClick={()=>requestSwitch(`Open ${scene.name}`,()=>openScene(scene))}>Open</button><button disabled={busy} aria-label={`Duplicate scene ${scene.name}`} onClick={()=>requestSwitch(`Create a copy of ${scene.name}`,()=>duplicateScene(scene))}>Duplicate</button><button disabled={busy} aria-label={`Delete scene ${scene.name}`} onClick={()=>deleteScene(scene)}>Delete</button></div></div>)}
       <details><summary>Cloud library metadata</summary><p>Explicitly sync the device library catalog through Postgres. This does not upload binary geometry or GIFs.</p><div className="capture-actions"><button disabled={busy} onClick={()=>void run(async(repo,token)=>{const local=await listLibrary();await repo.saveMetadata(local.map(e=>e.asset));const rows=await repo.catalog();if(valid(token)){setCatalog(rows);setMessage('Library metadata synced.');}})}>Sync library metadata</button><button disabled={busy} onClick={()=>void run(async(repo,token)=>{const rows=await repo.catalog();if(valid(token))setCatalog(rows);})}>Refresh asset metadata</button></div>{catalog.map(asset=><div className="metadata-row" key={asset.id}><p><b>{asset.name}</b><br />{asset.source_kind} · {asset.metadata.dimensions?.join(' × ')} m<br /><small>Use Cloud files to retrieve geometry, or reimport the matching source.</small></p><button disabled={busy} onClick={()=>deleteMetadata(asset)}>Delete metadata</button></div>)}</details>
     </>}
-      {retry&&<button disabled={busy} onClick={retry.run}>{retry.label}</button>}
     {pendingSwitch&&<div className="switch-confirm" role="dialog" aria-label="Unsaved room changes"><b>Unsaved changes</b><p>{pendingSwitch.label}?</p><div className="capture-actions"><button disabled={busy} onClick={()=>void saveBeforeSwitch()}>Save and continue</button><button disabled={busy} onClick={()=>{const action=pendingSwitch.action;setPendingSwitch(null);action();}}>Discard and continue</button><button disabled={busy} onClick={()=>setPendingSwitch(null)}>Cancel</button></div></div>}
     {retry&&<button disabled={busy} onClick={retry.run}>{retry.label}</button>}
     <p role="status" aria-label="Scene save status">{busy?'Working… ':''}{message}</p>

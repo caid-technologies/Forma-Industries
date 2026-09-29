@@ -11,7 +11,7 @@ type Props = { workspace: Workspace; selected: number; selectedPart: number; tim
 export function WorkspaceViewer(props: Props) {
   const host = useRef<HTMLDivElement>(null);
   const latest = useRef(props); latest.current = props;
-  const key = props.workspace.items.map(item => `${item.id}:${item.asset.id}:${item.missing}`).join('|');
+  const key = props.workspace.items.map(item => `${item.id}:${item.asset.id}:${item.cloudVersionId??'local'}:${item.missing}`).join('|');
   const roomKey = props.workspace.room.join(',');
   useEffect(() => {
     const el = host.current!; const p = latest.current;

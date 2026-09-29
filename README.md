@@ -36,7 +36,7 @@ You can import, edit, animate, and export locally without signing in. Optional c
 | Author motion | Add position and rotation keyframes for equipment or components, then play or scrub the timeline. |
 | Export a visual review | Render GIFs of a room, a floor section, or a selected asset, with companion JSON recording spatial and animation context. |
 | Reuse equipment | Save geometry and previews in a device asset library and add them to another layout. |
-| Save and reopen | Export portable scene JSON, restore local drafts, or explicitly save named cloud scenes after signing in. |
+| Save and reopen | Export portable scene JSON, restore local drafts, or save named cloud scenes with revision history, comparison, and restore. |
 | Work with agents locally | Use optional Forma/MCP workflows to author equipment, create or revise saved scenes from an external agent, and return animation feedback to Forma. |
 
 ## How Forma and Astra work together
@@ -141,6 +141,7 @@ npm run test:scene
 npm run test:workspace
 npm run test:mcp
 npm run test:mcp-scenes
+npm run test:scene-history
 ```
 
 For browser smoke tests, run `npm start` in another terminal after building, then run `npm test`, `npm run test:gif`, or `npm run test:fullscreen`. These need Chrome. The main `npm test` suite also needs the Python Forma installation and network access for a STEP fixture; the GIF suite does not need those two dependencies. Screenshots go to `test-results/`.
@@ -151,6 +152,7 @@ Live cloud tests need a dedicated Supabase test project and test-only credential
 
 - [Workspace guide](docs/workspace.md) — editing, animation, persistence, missing-geometry recovery, and the inspector.
 - [Forma handoff contract](docs/forma-handoff.md) — compiled artifacts, supported formats, provenance, and CAD resolution.
+- [Revision history and restore](docs/scene-history.md) — compare saved versions, restore a new head, and preserve exact geometry bindings.
 - [External-agent scene authoring](docs/mcp-scenes.md) — MCP setup, typed tools, revision URLs, and the deterministic cleanroom fixture.
 - [Development and integration guide](docs/development.md) — local generation, MCP, CLI, import contracts, and GIF details.
 - [Scene links](docs/scene-links.md) — private scene/revision URLs, expiring shared links, and deployment steps.

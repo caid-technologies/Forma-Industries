@@ -5,35 +5,37 @@ import { hydrateManifest, readManifest } from './workspace';
 import { sceneURLs, type SceneLink } from './scene-links';
 import type { SavedScene } from './scene-repository';
 
-/** No local catalog fallback: a revision must use its own immutable geometry. */
-export async function openSceneLink(client: SupabaseClient, link: SceneLink, sharedGeometry: (version: CloudVersion) => Promise<Blob>) {
-  const { data, error } = await client.rpc('get_workspace_scene', { p_id: link.id, p_revision: link.revision ?? null, p_share_token: link.token ?? null });
-  if (error) throw new Error(error.message);
-  const scene = data.scene as SavedScene;
+/** Every pinned instance resolves through its exact immutable file-version ID. */
+export async function loadSceneSnapshot(client: SupabaseClient, data: { scene: SavedScene; versions: CloudVersion[] }, options: {
+  localAssets?: Asset[]; sharedGeometry?: (version: CloudVersion) => Promise<Blob>; baseURL?: string;
+} = {}) {
+  const scene = data.scene;
   const manifest = readManifest(scene.document);
-  const available: Asset[] = [];
-  const versions = data.versions as CloudVersion[];
+  const available = new Map<string, Asset>();
   const storage = new CloudStorage(client, scene.owner_id);
-  const failures: string[] = [];
-  for (const assetId of new Set(manifest.instances.map(item => item.assetId))) {
-    const items = manifest.instances.filter(item => item.assetId === assetId);
-    const ids = new Set(items.map(item => item.cloudVersionId));
-    const version = versions.find(value => value.id === items[0].cloudVersionId && value.asset?.asset_key === assetId && value.state === 'ready');
-    // A manifest has one asset record per ID; reject ambiguous version mappings.
-    if (ids.size !== 1 || !version) { failures.push(items[0].name); continue; }
+  for (const versionId of new Set(manifest.instances.map(item => item.cloudVersionId).filter((id): id is string => Boolean(id)))) {
+    const items = manifest.instances.filter(item => item.cloudVersionId === versionId);
+    const version = data.versions.find(value => value.id === versionId && value.state === 'ready');
+    if (!version || items.some(item => item.assetId !== version.asset?.asset_key)) continue;
     try {
-      const blob = link.token ? await sharedGeometry(version) : await storage.downloadFile(version, 'asset.json');
+      const blob = options.sharedGeometry ? await options.sharedGeometry(version) : await storage.downloadFile(version, 'asset.json');
       const file = version.files.find(file => file.name === 'asset.json');
       if (!file || blob.size !== file.size || await digestBytes(await blob.arrayBuffer()) !== file.sha256) throw new Error('Geometry integrity check failed.');
       const asset = parseCloudBundle(await blob.text()).asset;
-      if (asset.id !== assetId) throw new Error('Geometry source mismatch.');
-      available.push(asset);
-    } catch { failures.push(items[0].name); }
+      if (asset.id !== version.asset?.asset_key) throw new Error('Geometry source mismatch.');
+      available.set(versionId, asset);
+    } catch { /* Missing/inaccessible pinned bytes stay missing; never use a local ID hit. */ }
   }
-  const workspace = hydrateManifest(manifest, available);
-  const missing = [...new Set([...failures, ...workspace.items.filter(item => item.missing).map(item => item.name)])];
-  return { scene: { ...scene, ...sceneURLs(scene.id, scene.revision, window.location.origin) }, workspace,
-    notice: missing.length ? `Unavailable assets: ${missing.join(', ')}. Ask the owner to upload matching geometry and share the new revision.` : '' };
+  const workspace = hydrateManifest(manifest, options.localAssets ?? [], available);
+  const missing = [...new Set(workspace.items.filter(item => item.missing).map(item => item.name))];
+  return { scene: { ...scene, ...sceneURLs(scene.id, scene.revision, options.baseURL) }, workspace,
+    notice: missing.length ? `Unavailable assets: ${missing.join(', ')}. Retrieve the exact cloud version or provide matching geometry for unversioned assets.` : '' };
+}
+
+export async function openSceneLink(client: SupabaseClient, link: SceneLink, sharedGeometry: (version: CloudVersion) => Promise<Blob>) {
+  const { data, error } = await client.rpc('get_workspace_scene', { p_id: link.id, p_revision: link.revision ?? null, p_share_token: link.token ?? null });
+  if (error) throw new Error(error.message);
+  return loadSceneSnapshot(client, data, { ...(link.token ? { sharedGeometry } : {}), baseURL: window.location.origin });
 }
 
 export function publicSceneClient() {

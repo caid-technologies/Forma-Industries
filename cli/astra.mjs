@@ -54,6 +54,8 @@ function validateRoom(document) {
 function cloudDocument(document) {
   const copy = structuredClone(validateRoom(document));
   delete copy.bundledAssets;
+  delete copy.bundledVersions;
+  copy.authoring = { via: 'cli' };
   copy.instances = copy.instances.map(({ cloudVersionId, ...instance }) => instance);
   return copy;
 }

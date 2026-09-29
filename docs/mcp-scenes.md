@@ -79,7 +79,7 @@ The result includes `version`, `scene_id`, numeric `revision_id`, `head_url`, `r
 
 Scene writes use the existing `save_workspace_scene` RPC, immutable revision snapshots, and owner-scoped asset versions. Geometry is verified for size, SHA-256, identity, topology, and supported provenance before use. The cleanroom architecture remains explicitly `generated` with generator `forma-industries`; it is synthetic architectural geometry, not Forma-authored hardware or STEP CAD. Generated assets now use the same private immutable Storage lifecycle after the new migration. Example imports upload only the selected bundled assets.
 
-Each snapshot records `authoring.via`, the caller's descriptive `agent` label, `parent_revision`, `request_id`, and a request digest. The label is not an authenticated agent identity. History browsing, diff, and restore remain separate work under #66. The broader retained-Forma-data sanitization work remains #37; these tools expose only allowlisted scene/source fields and never return raw retained project documents.
+Each snapshot records `authoring.via`, the caller's descriptive `agent` label, `parent_revision`, `request_id`, and a request digest. The label is not an authenticated agent identity. The workbench provides [history, comparison, and restore](scene-history.md); its database-assigned parent and authenticated author metadata extend this document-level provenance. The broader retained-Forma-data sanitization work remains #37; these tools expose only allowlisted scene/source fields and never return raw retained project documents.
 
 Failed tools set `isError: true` and return `{"error":{"code":"…","message":"…"}}`; conflicts also include `current_revision` when available.
 

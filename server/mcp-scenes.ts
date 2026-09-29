@@ -130,7 +130,7 @@ export async function executeSceneTool(name: string, raw: unknown, ctx: SceneCon
     workspace.items.push({ id: instance.id, name: instance.name, asset, position: instance.position, rotation: instance.rotation, visible: instance.visible, cloudVersionId: version });
   }
   // Validate the complete scene before any uploads or scene writes.
-  try { hydrateManifest(readManifest(makeManifest(workspace)), workspace.items.map(item => item.asset)); }
+  try { hydrateManifest(readManifest(makeManifest(workspace)), workspace.items.map(item => item.asset), new Map(workspace.items.filter(item => item.cloudVersionId).map(item => [item.cloudVersionId!, item.asset]))); }
   catch { return fail('INVALID_SCENE', 'Invalid instance IDs, animation targets, or keyframes. Targets must exist; key times must be unique and within the duration. Inspect the asset for valid part IDs.'); }
   function documentFor(value: Workspace) {
     const manifest = makeManifest(value);

@@ -32,9 +32,13 @@ Tracks target stable instance IDs and optional source part IDs. Deleting an inst
 - Deleting a scene releases references, not shared geometry files. Object deletion is blocked while another scene references the version.
 - Sign-out/account changes clear the active workspace, scene selection, and user-specific cloud lists. Source files already explicitly stored in the device library remain local files.
 
-Opening a metadata-only scene on a device without the source files produces labeled red **missing geometry placeholders** at the saved transforms. Reimporting the exact original asset replaces placeholders while retaining instance IDs and animation. Missing geometry cannot be exported as a review GIF. Source digests, project IDs, and Forma revision numbers identify the expected design. Cloud files are downloaded and integrity-checked when storage is enabled.
+Opening a metadata-only scene on a device without the source files produces labeled red **missing geometry placeholders** at the saved transforms. Reimporting the exact original asset replaces placeholders while retaining instance IDs and animation. Missing geometry cannot be exported as a review GIF. Source digests, project IDs, and Forma revision numbers identify the expected design. Pinned cloud files are downloaded and integrity-checked independently of the upload flag. Missing pinned geometry requires its exact cloud file version; a matching local asset ID or source digest is not a substitute.
 
 Scene lists and the metadata catalog currently show the latest 200 records. Binary files keep the storage feature's 25 MiB/file and 50 MiB/bundle limits; scene JSON in Postgres is limited to 2 MiB and 1,000 instances. Local portable scene files are limited to 75 MiB on import. Animation documents allow up to 120 seconds, 1,000 tracks, and 10,000 keys. Large models still require practical performance validation on the target hardware.
+
+## Saved revision history
+
+Expand **Revision history** for an owned scene to inspect authorship and change summaries, compare any two saved revisions, or restore an earlier snapshot as a new head. A stale restore returns the current revision and leaves history unchanged. See [revision history and restore](scene-history.md) for migration, exact file-version binding, and legacy-cache recovery details.
 
 ## Forma data and inspector
 
