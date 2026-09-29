@@ -1,4 +1,4 @@
-import { cadFileReference, importForm, readFormDocument, record } from './form';
+import { cadFileReference, importForm, readFormDocument } from './form';
 import { checkFile, digestBytes, type Asset } from './scene';
 import { convertStep, stepToAsset, type StepOptions, type StepResult } from './step';
 
@@ -28,7 +28,8 @@ export class ImportService {
     if (inputs.reduce((sum, f) => sum + f.size, 0) > 75 * 1024 * 1024) throw new Error('Import batch exceeds 75 MiB. Import fewer files at a time.');
     const jsonFiles = inputs.filter(f => /\.json$/i.test(f.name));
     // A folder may contain unrelated JSON; the canonical manifest is its entry point.
-    const projects = jsonFiles.some(f => f.name === 'form-project.json') ? jsonFiles.filter(f => f.name === 'form-project.json') : jsonFiles;
+    const isManifest = (file: File) => /^(form|forma)-project\.json$/i.test(file.name);
+    const projects = jsonFiles.some(isManifest) ? jsonFiles.filter(isManifest) : jsonFiles;
     const used = new Set<File>();
     const assets: Asset[] = [];
     for (const file of projects) {

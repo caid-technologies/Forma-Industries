@@ -27,7 +27,9 @@ The importer also accepts these existing Form representations:
 
 - A top-level `hardware_ir` object.
 - A top-level `project_ir` object.
-- A `form.project` namespace object containing `project.meta`, `product.overview`, `product.electrical`, and `product.mech` payloads.
+- A `form.project` (or legacy `forma.project`) namespace object containing `project.meta`, `product.overview`, `product.electrical`, and `product.mech` payloads.
+
+Legacy `forma-project` manifests and the `forma-project.json` entry-point filename remain supported alongside `form-project` / `form-project.json`. The branding change does not require editing existing project files.
 
 Compiled IR is preferred over a draft IR. The compiled project is the source of truth for validation, component identity, mechanical placements, and CAD references.
 
@@ -103,3 +105,14 @@ Form owns the authored Hardware IR, electrical validation, component identity, a
 ## Compatibility
 
 Unsupported versions and malformed variants must fail with an actionable message. Mergence must retain local file import when Form MCP is unavailable. Direct MCP integration is optional and must remain server-side; credentials must never enter the browser bundle or saved scene files.
+
+
+### Typed import validation
+
+The import models in `src/lib/form-model.ts` follow the [upstream Hardware IR definitions](https://github.com/caid-technologies/Form-OSS/blob/d594bd3317860eb1225030dcc38d8a2a26f5d291/forma_core/workspaces/projects/models.py). Known overview, component, part-definition, BOM, net/pin, validation, mechanical, assembly, architecture, and provenance fields are typed and checked before either envelope or companion-STEP import. Errors identify the failing field, for example `project_ir.bom[0].quantity` or `namespace.mechanical.component_placements[0].size.x_mm`.
+
+Optional sections may be absent. Nullable overview, mechanical, requirements, architecture, validation and metadata sections remain supported; geometry must still be available to render an asset. A missing raw-IR version keeps the legacy 0.1 default, while namespace documents default to 0.2. Explicit unsupported, empty or non-string versions are rejected. Object revision counters are independent of the Hardware IR version.
+
+Validation retains the sanitized source document and all extension fields without coercion, defaults or IR-version migration. In particular, legacy 0.1 component quantities are not expanded into invented geometry. Open-ended CAD adapters, electrical specifications, instance configurations and vendor namespaces remain data rather than execution instructions. Structured runtime settings and secrets remain excluded by the portable-data policy above.
+
+This is import structure validation, not a rerun of the upstream compiler's electrical, BOM consistency or manufacturing checks. Existing compiler findings are retained for inspection, including unsuccessful validation results. The deterministic `npm run test:form-import` suite covers both IR versions, all supported wrappers, legacy identifiers, missing/malformed fields, source retention, normalized geometry, companion-CAD imports and portable round trips. Attributable workflow-produced fixtures remain a separate #21 follow-up.

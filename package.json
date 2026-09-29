@@ -14,6 +14,7 @@
     "start": "node --env-file-if-exists=.env server/index.mjs",
     "test": "node scripts/smoke.mjs",
     "test:e2e": "node scripts/smoke.mjs",
+    "test:form-import": "node --import tsx scripts/form-import-test.ts",
     "test:cad": "tsx scripts/cad-import-test.ts",
     "test:scene": "tsx scripts/scene-manifest-test.ts",
     "test:draft-recovery": "node scripts/draft-recovery-smoke.mjs",
