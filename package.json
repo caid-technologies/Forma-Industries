@@ -26,7 +26,9 @@
     "test:workspace": "tsx scripts/workspace-test.ts",
     "test:workspace-live": "tsx scripts/workspace-smoke.ts",
     "test:storage-disabled": "node scripts/cloud-storage-disabled-smoke.mjs",
-    "test:fullscreen": "node scripts/fullscreen-smoke.mjs && node scripts/fullscreen-import-smoke.mjs"
+    "test:fullscreen": "node scripts/fullscreen-smoke.mjs && node scripts/fullscreen-import-smoke.mjs",
+    "test:scene-links": "node --import tsx scripts/scene-links-test.ts",
+    "test:scene-links-browser": "node --import tsx scripts/scene-links-browser-test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
@@ -39,6 +41,7 @@
     "three": "^0.180.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@playwright/test": "^1.55.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",

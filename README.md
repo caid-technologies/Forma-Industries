@@ -151,6 +151,7 @@ Live cloud tests need a dedicated Supabase test project and test-only credential
 - [Workspace guide](docs/workspace.md) — editing, animation, persistence, missing-geometry recovery, and the inspector.
 - [Forma handoff contract](docs/forma-handoff.md) — compiled artifacts, supported formats, provenance, and CAD resolution.
 - [Development and integration guide](docs/development.md) — local generation, MCP, CLI, import contracts, and GIF details.
+- [Scene links](docs/scene-links.md) — private scene/revision URLs, expiring shared links, and deployment steps.
 - [Cloud storage guide](docs/cloud-storage.md) — private asset transfers, setup, limits, and lifecycle.
 - [Supabase Auth and database setup](supabase/README.md) — schema, GitHub login, migrations, and ownership checks.
 - [Cleanroom example](public/examples/cleanroom/README.md) — scene behavior, source models, and CAD licensing.

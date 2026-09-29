@@ -20,6 +20,9 @@ import { SceneControls } from './components/scene-controls';
 import { ProjectInspector } from './components/project-inspector';
 import { backupDraft, loadWorkspaceDraft, replaceDraftWithBackup, saveWorkspaceDraft } from './lib/workspace-draft';
 import { supabase } from './lib/supabase';
+import { readSceneLink } from './lib/scene-links';
+import { downloadSharedGeometry, openSceneLink, publicSceneClient } from './lib/scene-link-loader';
+import { connectUserClient } from './lib/cloud-session';
 import './style.css';
 import './workspace.css';
 
@@ -41,7 +44,10 @@ function App(){
   const [fullscreen,setFullscreen]=useState(false);const[expanded,setExpanded]=useState(false);const[workspaceVisible,setWorkspaceVisible]=useState(false);
   const [captureOpen,setCaptureOpen]=useState(false);const[captureRegion,setCaptureRegion]=useState<FloorRegion|null>(null);
   const isFullscreen=fullscreen||expanded;const restoreAfterPicker=useRef(false);
-  const cleanroomPreview=new URLSearchParams(location.search).get('scene')==='cleanroom';
+  const linkMode=new URLSearchParams(location.search).has('sceneId');
+  const [linkHash,setLinkHash]=useState(location.hash);
+  const [linkedScene,setLinkedScene]=useState<SavedScene|null>(null);
+  const cleanroomPreview=!linkMode&&new URLSearchParams(location.search).get('scene')==='cleanroom';
   const owner=useUserId();const previousOwner=useRef<string|null>(null);
   const roomOperation=useRef(0);
   const[draftReady,setDraftReady]=useState(false);const draftOwner=useRef<string|null>(null);const draftEpoch=useRef(0);const[localSaved,setLocalSaved]=useState(false);
@@ -51,11 +57,39 @@ function App(){
   function change(next:Workspace){setHistory(old=>({past:[...old.past,old.present].slice(-50),present:next,future:[]}));}
   function replace(next:Workspace){roomOperation.current++;setPlaying(false);setTime(null);setSelected(-1);setSelectedPart(-1);setHistory({past:[],present:next,future:[]});setFocus(n=>n+1);}
   useEffect(()=>{
+    if(linkMode)return;
     if(previousOwner.current&&previousOwner.current!==owner){draftEpoch.current++;draftOwner.current=owner;setAdoptionPending(false);replace(emptyWorkspace());setCurrentScene(null);setCaptureOpen(false);setStatus('Account changed; cloud workspace cleared.');}
     if(!previousOwner.current&&owner&&draftOwner.current!==owner&&workspace.items.length){setAdoptionPending(true);setBusy(true);setStatus('Choose what to do with this anonymous draft.');}
     previousOwner.current=owner;
   },[owner,workspace.items.length]);
   useEffect(()=>{
+    if(!linkMode)return;
+    const changed=()=>setLinkHash(location.hash);
+    window.addEventListener('hashchange',changed);
+    return()=>window.removeEventListener('hashchange',changed);
+  },[linkMode]);
+  useEffect(()=>{
+    if(!linkMode)return;
+    let active=true;
+    setBusy(true);setError('');setLinkedScene(null);setCurrentScene(null);setCaptureOpen(false);replace(emptyWorkspace());
+    setStatus('Opening scene link…');
+    void (async()=>{
+      const link=readSceneLink(new URL(location.href))!;
+      const session=supabase?await supabase.auth.getSession():null;
+      const id=session?.data.session?.user.id??null;
+      const client=link.token||!id?publicSceneClient():await connectUserClient(id);
+      const result=await openSceneLink(client,link,version=>downloadSharedGeometry(link,version));
+      if(!active)return;
+      replace(result.workspace);setLinkedScene(result.scene);
+      setCurrentScene(!link.token&&result.scene.owner_id===id?result.scene:null);
+      setRoomId(crypto.randomUUID());setTime(0);
+      setStatus(`Opened ${result.scene.name} · revision ${result.scene.revision}${link.revision?' (pinned)':' (latest)'}`);
+      if(result.notice)setError(result.notice);
+    })().catch(e=>{if(active){setError((e as Error).message);setStatus('Scene link could not be opened.');}}).finally(()=>{if(active)setBusy(false);});
+    return()=>{active=false;};
+  },[owner,linkHash]);
+  useEffect(()=>{
+    if(linkMode)return;
     let active=true;const epoch=draftEpoch.current;let requestedScope='guest';
     const fallback=window.setTimeout(()=>{if(active){setDraftReady(true);setBusy(false);setDraftRecovery({scope:requestedScope,message:'Saved workspace loading exceeded 12 seconds. Retry or recover it without discarding the stored data.'});setError('Saved workspace loading timed out.');}},12000);
     void (async()=>{
@@ -81,7 +115,7 @@ function App(){
     return()=>{active=false;clearTimeout(fallback);};
   },[]);
   useEffect(()=>{
-    if(!draftReady||draftOwner.current!==owner||new URLSearchParams(location.search).get('scene')==='cleanroom')return;setLocalSaved(false);
+    if(linkMode||!draftReady||draftOwner.current!==owner||new URLSearchParams(location.search).get('scene')==='cleanroom')return;setLocalSaved(false);
     const timer=setTimeout(()=>{void saveWorkspaceDraft(workspace,owner,roomId,currentScene).then(()=>setLocalSaved(true)).catch(e=>setError(e.message));},250);
     return()=>clearTimeout(timer);
   },[workspace,owner,roomId,draftReady,currentScene]);
@@ -171,7 +205,8 @@ function App(){
   }
   const side=<aside id="workspace-panel" className={isFullscreen?'fullscreen-workspace':''} hidden={isFullscreen&&!workspaceVisible}>
     <div className="eyebrow">WORKSPACE</div><h1>Make room<br/>for your ideas.</h1><p>Import a Forma project, STEP model, or saved Astra scene. Arrange it, author motion, and save it across devices.</p>
-    <small role="status" aria-label="Local draft status">{localSaved?'Local draft saved':'Local draft changes pending'}</small>
+    <small role="status" aria-label="Local draft status">{linkMode?'Link workspace · not autosaved':localSaved?'Local draft saved':'Local draft changes pending'}</small>
+    {linkMode&&<section aria-label="Scene link"><b>{linkedScene?`${linkedScene.name} · revision ${linkedScene.revision}`:'Scene link'}</b><p>This workspace is separate from your saved local rooms. Export edits or save to cloud to keep them.</p><a href="/">Return to saved workspace</a><button disabled={busy} onClick={()=>location.reload()}>Reload scene link</button></section>}
     <div className="capture-actions"><button onClick={()=>document.querySelector('.timeline')?.scrollIntoView({block:'start'})}>Animate</button><button onClick={()=>document.querySelector('[aria-label="Scene persistence"]')?.scrollIntoView({block:'start'})}>Save / open scenes</button></div>
      {cleanroomPreview&&<section className="cleanroom-plan" aria-label="Today's cleanroom sampling plan"><div className="eyebrow">TODAY'S SAMPLING / POC</div><table aria-label="Room access and sample schedule"><thead><tr><th scope="col">Room</th><th scope="col">Samples</th><th scope="col">Proposed times</th><th scope="col">Access status</th></tr></thead><tbody>{samplingPlan.map(room=><tr key={room.room} className={room.access.status==='blocked'?'blocked-room':''}><th scope="row">{room.room}</th><td>{room.requiredSamples}</td><td>{room.proposedTimes.length?room.proposedTimes.map((time,index)=><span key={`${time.start}-${time.end}`}>{index>0&&<br/>}{time.start}–{time.end}</span>):'Not scheduled'}</td><td>{room.access.status==='available'?`Available ${room.access.window.start}–${room.access.window.end}`:`No access window; ${room.access.reason}`}</td></tr>)}</tbody></table><p>Facility map: A northwest, B northeast, C southwest; D is unplanned. The bot enters A and C only, and skips occupied Room B. Animation scale: 1 second = 1 scheduled minute from 09:00. POC only; confirm current access and sample points before operation.</p></section>}
     <input ref={input} aria-label="Import files" type="file" accept=".json,.step,.stp" multiple hidden onChange={e=>{finishFilePicker();void load(Array.from(e.target.files??[]));e.target.value='';}}/>
@@ -186,7 +221,7 @@ function App(){
     <SceneControls workspace={workspace} owner={owner} roomId={roomId} setRoomId={setRoomId} current={currentScene} setCurrent={setCurrentScene} replace={replace} busy={busy} setBusy={setBusy} onExport={exportScene}/>
      {import.meta.env.VITE_FORMA_GENERATION_ENABLED!=='false'&&!cleanroomPreview&&<details><summary>Build with Forma</summary><textarea aria-label="Project description" value={prompt} onChange={e=>setPrompt(e.target.value)}/><label>Generation mode<select value={mode} onChange={e=>setMode(e.target.value)}><option value="simulation">Deterministic demo</option><option value="live">Live generation</option></select></label>{mode==='live'&&<><label>Provider<input value={provider} onChange={e=>setProvider(e.target.value)}/></label><label>Model<input value={model} onChange={e=>setModel(e.target.value)}/></label></>}<button disabled={busy} onClick={()=>void generate()}>Build and import →</button></details>}
   </aside>;
-  return <><header className="app-header"><div className="brand"><span className="logo">A</span> ASTRA <span className="muted">INDUSTRIES</span></div><span className="tag">SPATIAL WORKBENCH</span><AuthControls beforeSignIn={()=>preserveAuthWorkspace(assets,workspace.room,selected,workspace.items.map(i=>i.position),workspace)}/><button disabled={busy} onClick={openFilePicker}>+ Import project</button></header>
+  return <><header className="app-header"><div className="brand"><span className="logo">A</span> ASTRA <span className="muted">INDUSTRIES</span></div><span className="tag">SPATIAL WORKBENCH</span><AuthControls returnTo={linkMode?location.origin+location.pathname+location.search:undefined} beforeSignIn={()=>linkMode?Promise.resolve():preserveAuthWorkspace(assets,workspace.room,selected,workspace.items.map(i=>i.position),workspace)}/><button disabled={busy} onClick={openFilePicker}>+ Import project</button></header>
     <main onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();void load(Array.from(e.dataTransfer.files));}}>
       {isFullscreen&&stage.current?createPortal(side,stage.current):side}
       <div ref={stage} className={`stage${expanded?' stage-expanded':''}`}>
