@@ -7,3 +7,5 @@ The example models four 20 ft rooms within an 80 ft square, 20 ft perimeter corr
 The robot and workbench STEP geometry comes from the `forma-cleanroom-swab-bot` and `forma-cleanroom-desk` Forma OSS projects. Both projects declare their mechanical CAD under CERN-OHL-S-2.0; see their source project documentation for license terms and provenance.
 
 Regenerate the bundled room geometry and robot timeline from Forma Industries with `node --import tsx scripts/build-cleanroom-example.mjs`.
+
+[`cleanroom-room-a-sample.gif`](cleanroom-room-a-sample.gif) is a 4-second authored-timeline export from the first Room A sample window. With Forma Industries running on port 5174, regenerate it with `node scripts/render-cleanroom-example-gif.mjs`.
