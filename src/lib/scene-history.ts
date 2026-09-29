@@ -70,6 +70,7 @@ export function compareSceneRevisions(before: SavedScene, after: SavedScene, lim
     for (const time of [...new Set([...ak.keys(), ...bk.keys()])].sort((x,y) => x-y)) {
       add('Animation', id, `Position at ${time}s (m)`, ak.get(time)?.position, bk.get(time)?.position);
       add('Animation', id, `Rotation at ${time}s (°)`, ak.get(time)?.rotation, bk.get(time)?.rotation);
+      add('Animation', id, `Visible at ${time}s`, ak.get(time)?.visible, bk.get(time)?.visible);
     }
   }
   return { from_revision: before.revision, to_revision: after.revision, changes, total_changes: total };

@@ -44,7 +44,7 @@ export async function loadWorkspaceDraft(owner:string|null):Promise<{workspace:W
     workspace.animation.duration=Math.max(.5,stored.scene.animation.durationSeconds);
     workspace.animation.tracks=stored.scene.animation.tracks.filter(track=>track.keyframes.length).map(track=>{
       const item=workspace.items.find(i=>i.id===track.instanceId)!;let position=item.position,rotation=item.rotation;
-      return{id:`${track.instanceId}:instance`,instanceId:track.instanceId,keys:track.keyframes.map(key=>{position=key.position??position;rotation=key.rotation??rotation;return{id:crypto.randomUUID(),time:key.timeSeconds,position,rotation};})};
+      return{id:`${track.instanceId}:instance`,instanceId:track.instanceId,keys:track.keyframes.map(key=>{position=key.position??position;rotation=key.rotation??rotation;return{id:crypto.randomUUID(),time:key.timeSeconds,position,rotation,...(key.visible !== undefined ? {visible:key.visible} : {})};})};
     });
   }
   return {workspace,scene:null,roomId};

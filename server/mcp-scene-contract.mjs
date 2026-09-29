@@ -11,7 +11,7 @@ export const assetReference = { oneOf: [
   object({ kind: { const: 'cloud' }, version_id: uuid }),
   object({ kind: { const: 'example' }, id: { enum: ['cleanroom-architecture', 'cleanroom-robot', 'cleanroom-desk'] } }),
 ] };
-const key = object({ time: { type: 'number', minimum: 0, maximum: 120 }, position: vector, rotation: vector });
+const key = object({ time: { type: 'number', minimum: 0, maximum: 120 }, position: vector, rotation: vector, visible: { type: 'boolean' } }, ['time', 'position', 'rotation']);
 const track = object({ instance_id: id, part_id: id, keys: { ...array(key, 10000), minItems: 1 } }, ['instance_id', 'keys']);
 const animation = object({ duration: { type: 'number', minimum: 0.5, maximum: 120 }, loop: { type: 'boolean' }, tracks: array(track, 1000) });
 const instance = object({ id, name: label, asset: assetReference, position: vector, rotation: vector, visible: { type: 'boolean' } });

@@ -16,9 +16,9 @@ export type GifMetadata = {
   schemaVersion: 1; units: 'm'; upAxis: 'Y'; scope: GifOptions['scope']; motion: GifOptions['motion'];
   width: number; height: number; frameCount: number; frameDelayMs: number; durationSeconds: number;
   room: number[]; region?: FloorRegion;
-  assets: { id: string; instanceId: string; name: string; source: Asset['source']; position: number[]; rotation: number[]; warnings: string[] }[];
+  assets: { id: string; instanceId: string; name: string; source: Asset['source']; position: number[]; rotation: number[]; visible: boolean; warnings: string[] }[];
   note: string; animation?: Workspace['animation'];
-  frames?: { time: number; instances: { id: string; position: number[]; rotation: number[]; parts: Record<string, unknown> }[] }[];
+  frames?: { time: number; instances: { id: string; position: number[]; rotation: number[]; visible: boolean; parts: Record<string, unknown> }[] }[];
 };
 export function regionBounds(region: FloorRegion, room: number[]) {
   const { x,z,width,depth }=region;
@@ -66,7 +66,7 @@ export async function renderGif(assets: Asset[], room: number[], options: GifOpt
     const canvas=document.createElement('canvas');canvas.width=options.size;canvas.height=options.size;const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)throw new Error('This browser cannot capture GIF frames.');
     const gif=GIFEncoder();
     const metadata:GifMetadata={schemaVersion:1,units:'m',upAxis:'Y',scope:options.scope,motion:options.motion,width:options.size,height:options.size,frameCount:frames,frameDelayMs:delay,durationSeconds:frames*delay/1000,room:[...room],...(section?{region:{...options.region}}:{}),
-      assets:[...included].map(i=>({id:assets[i].id,instanceId:state.items[i].id,name:state.items[i].name,source:{...assets[i].source},position:[...snapshots[0][i].position],rotation:[...snapshots[0][i].rotation],warnings:[...assets[i].warnings]})),
+      assets:[...included].map(i=>({id:assets[i].id,instanceId:state.items[i].id,name:state.items[i].name,source:{...assets[i].source},position:[...snapshots[0][i].position],rotation:[...snapshots[0][i].rotation],visible:snapshots[0][i].visible,warnings:[...assets[i].warnings]})),
       note:options.motion==='animation'?'Authored timeline evaluated at the recorded frame times; fixed review camera.':options.motion==='sample'?'Synthetic lift-and-return preview; isolated asset. Not an authored physical process.':`${isolated?'Isolated asset camera orbit; metadata retains room coordinates.':'Camera orbit around current instance poses.'} Floor-section geometry is clipped at its boundaries.`,
       ...(options.motion==='animation'?{animation:structuredClone(state.animation),frames:[]}:{}),
     };
@@ -79,7 +79,7 @@ export async function renderGif(assets: Asset[], room: number[], options: GifOpt
       const angle=Math.PI/4+(options.motion==='turntable'?frame/frames*Math.PI*2:0);
       camera.position.set(center.x+Math.sin(angle)*distance*.82,center.y+distance*.58,center.z+Math.cos(angle)*distance*.82);camera.lookAt(center);
       updateCameraDepth(camera,world.scene,center);renderer.render(world.scene,camera);
-      metadata.frames?.push({time:start+frame*delay/1000,instances:[...included].map(i=>({id:state.items[i].id,position:poses[i].position,rotation:poses[i].rotation,parts:poses[i].parts}))});
+      metadata.frames?.push({time:start+frame*delay/1000,instances:[...included].map(i=>({id:state.items[i].id,position:poses[i].position,rotation:poses[i].rotation,visible:poses[i].visible,parts:poses[i].parts}))});
       context.drawImage(renderer.domElement,0,0);context.fillStyle='#101716';context.fillRect(0,options.size-29,options.size,29);context.fillStyle='#dfe7df';context.font='11px sans-serif';context.fillText(`ASTRA | ${options.scope.toUpperCase()} | ${options.motion.toUpperCase()} | meters`,10,options.size-11);
       const pixels=context.getImageData(0,0,options.size,options.size).data;const palette=quantize(pixels,256);gif.writeFrame(applyPalette(pixels,palette),options.size,options.size,{palette,delay,repeat:options.motion==='animation'&&!state.animation.loop?-1:0});
       progress((frame+1)/frames);await new Promise(resolve=>setTimeout(resolve,0));
