@@ -29,6 +29,7 @@ export function appendAssets(workspace: Workspace, assets: Asset[], cloudVersion
     const canRepair = (item: SceneItem) => item.missing && item.asset.id === asset.id && (!item.cloudVersionId || item.cloudVersionId === cloudVersionId);
     const missing = items.some(canRepair);
     if (missing) {
+      for (const item of items.filter(canRepair)) assertSourceMatches({ ...item.asset, projectRevision: item.asset.formProject?.revision }, asset);
       items = items.map(item => canRepair(item) ? { ...item, asset, missing: false, cloudVersionId } : item);
       continue;
     }
@@ -87,7 +88,7 @@ export function makeManifest(workspace: Workspace, bundle = false): SceneManifes
 const validVector = (v: unknown): v is Vec3 => Array.isArray(v) && v.length === 3 && v.every(n => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= 1e6);
 const validString = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 512;
 export function readManifest(value: unknown): SceneManifest {
-  const m = value as SceneManifest;
+  const m = scrubCloudData(value) as SceneManifest;
   if (!m || m.format !== 'astra.scene' || m.version !== 1 || m.units !== 'm' || m.upAxis !== 'Y' || !validVector(m.room) || !m.room.every(n => n >= 1 && n <= 100)
       || !Array.isArray(m.assets) || m.assets.length > 1000 || !Array.isArray(m.instances) || m.instances.length > 1000) throw new Error('Unsupported or invalid Mergence scene manifest.');
   const assetIds = new Set<string>();
@@ -135,6 +136,15 @@ export function missingAsset(ref: AssetReference, cloudVersionId?: string): Asse
   geometry.dispose();
   return { ...ref, schemaVersion: 1, units: 'm', upAxis: 'Y', originOffset: [0,0,0], parts: [part], hierarchy: { id: `${ref.id}/root`, name: ref.name, partIds: [part.id], children: [] }, warnings: [cloudVersionId ? `Cloud file version ${cloudVersionId} is unavailable. Retrieve that exact version or reopen the saved revision after restoring Storage access.` : 'Geometry unavailable. Reimport the matching source.'], ...(ref.projectRevision ? {formProject:{projectId:ref.source.projectId,revision:ref.projectRevision,hardwareIrVersion:ref.source.version?.split(' / ')[0]??'0.2',ir:{},source:'raw_ir' as const}} : {}) };
 }
+/** IDs alone cannot prove that a source is the revision used by this scene. */
+export function assertSourceMatches(ref: AssetReference, asset: Asset): void {
+  if (asset.id !== ref.id || asset.source.kind !== ref.source.kind || asset.source.digest !== ref.source.digest
+      || asset.source.version !== ref.source.version || asset.source.projectId !== ref.source.projectId
+      || (ref.source.projectId !== undefined && asset.formProject?.projectId !== undefined && asset.formProject.projectId !== ref.source.projectId)
+      || (ref.projectRevision !== undefined && asset.formProject?.revision !== ref.projectRevision)) {
+    throw new Error(`Source revision mismatch for ${ref.name}. Reimport the original project/revision or open a portable scene containing its matching geometry. The current scene has not been replaced.`);
+  }
+}
 export function hydrateManifest(manifest: SceneManifest, available: Asset[], availableVersions: ReadonlyMap<string, Asset> = new Map()): Workspace {
   const assets = new Map(available.map(asset => [asset.id, asset]));
   for (const raw of manifest.bundledAssets ?? []) {
@@ -151,7 +161,7 @@ export function hydrateManifest(manifest: SceneManifest, available: Asset[], ava
     // A matching source digest or asset ID is not proof of a file version.
     const candidate = instance.cloudVersionId ? versions.get(instance.cloudVersionId) : assets.get(assetId);
     const asset = candidate?.id === assetId ? candidate : undefined;
-    if (asset && (asset.source.digest !== ref.source.digest || asset.source.version !== ref.source.version || (ref.projectRevision !== undefined && asset.formProject?.revision !== ref.projectRevision))) throw new Error(`Source revision mismatch for ${ref.name}.`);
+    if (asset) assertSourceMatches(ref, asset);
     return { ...instance, asset: asset ?? missingAsset(ref, instance.cloudVersionId), missing: !asset };
   });
   for (const track of manifest.animation.tracks) {

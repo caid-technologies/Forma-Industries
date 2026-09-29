@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { digestBytes, finalizeAsset, type Asset, type AssetNode } from './scene';
 import type { LibraryEntry } from './library';
+import { scrubPortableData } from './portable-data.mjs';
 
 export const CLOUD_BUCKET = 'astra-assets';
 export const CLOUD_FILE_LIMIT = 25 * 1024 * 1024;
@@ -11,18 +12,13 @@ export type CloudVersion = {
   asset?: { name: string; asset_key: string; source_kind: string };
 };
 
-// Compiled Form data may retain provider metadata. Never transfer credential fields.
-export function scrubCloudData(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(scrubCloudData);
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value)
-    .filter(([key]) => !/(api.?key|secret|password|credential|authorization|token)/i.test(key))
-    .map(([key, item]) => [key, scrubCloudData(item)]));
-  return value;
-}
+// Keep the existing import name while sharing the policy with local MCP/CLI tools.
+export const scrubCloudData = scrubPortableData;
 
 export function parseCloudBundle(text: string): LibraryEntry {
   let bundle;
   try { bundle = JSON.parse(text); } catch { throw new Error('Cloud geometry is not valid JSON. Re-upload the original asset.'); }
+  bundle = scrubPortableData(bundle) as typeof bundle;
   const asset = bundle?.asset as Asset;
   if (bundle?.schemaVersion !== 1 || asset?.schemaVersion !== 1 || asset.units !== 'm' || asset.upAxis !== 'Y'
       || typeof asset.id !== 'string' || typeof asset.name !== 'string' || !['form', 'step', 'generated'].includes(asset.source?.kind)

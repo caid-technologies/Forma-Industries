@@ -31,6 +31,7 @@ type History={past:Workspace[];present:Workspace;future:Workspace[]};
 function App(){
   const [history,setHistory]=useState<History>(()=>({past:[],present:emptyWorkspace(),future:[]}));
   const workspace=history.present;const assets=workspace.items.map(i=>i.asset);
+  const latestWorkspace=useRef(workspace);latestWorkspace.current=workspace;
   const [selected,setSelected]=useState(-1);const[selectedPart,setSelectedPart]=useState(-1);const[focus,setFocus]=useState(0);
   const [time,setTime]=useState<number|null>(null);const[playing,setPlaying]=useState(false);
   const [currentScene,setCurrentScene]=useState<SavedScene|null>(null);
@@ -146,7 +147,8 @@ function App(){
   function finishFilePicker(){const restore=restoreAfterPicker.current;restoreAfterPicker.current=false;if(!restore)return;if(document.fullscreenElement===stage.current){setExpanded(false);return;}void stage.current?.requestFullscreen?.().then(()=>setExpanded(false)).catch(()=>{});}
   useEffect(()=>{const el=input.current;el?.addEventListener('cancel',finishFilePicker);return()=>el?.removeEventListener('cancel',finishFilePicker);});
   function addAsset(asset:Asset,cloudVersionId?:string){
-    setHistory(old=>({past:[...old.past,old.present].slice(-50),present:appendAssets(old.present,[asset],cloudVersionId),future:[]}));
+    try { change(appendAssets(latestWorkspace.current,[asset],cloudVersionId)); } catch(e) { setError((e as Error).message);return; }
+    setError('');
     setSelected(workspace.items.length);setSelectedPart(-1);setTime(null);setPlaying(false);setStatus(`Added ${asset.name} from library`);
   }
   function adoptAnonymousDraft(){
@@ -168,7 +170,7 @@ function App(){
       }
       const next=await importer.files(files,{upAxis,scale},setStatus);
       if(operation!==roomOperation.current){setStatus('Import ignored because the room changed.');return;}
-      setHistory(old=>({past:[...old.past,old.present].slice(-50),present:appendAssets(old.present,next),future:[]}));
+      change(appendAssets(latestWorkspace.current,next));
       setSelected(workspace.items.findIndex(i=>i.missing&&next.some(a=>a.id===i.asset.id))>=0?workspace.items.findIndex(i=>i.missing&&next.some(a=>a.id===i.asset.id)):workspace.items.length);
       setSelectedPart(-1);setTime(null);setPlaying(false);setStatus(`Imported ${next.length} asset(s)`);
     }catch(e){setError((e as Error).message);setStatus('Import failed');}finally{setBusy(false);}
@@ -178,7 +180,7 @@ function App(){
     const operation=roomOperation.current;
     try{
       const response=await fetch('/api/generations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,mode,provider,model})});const data=await response.json();if(!response.ok)throw new Error(data.error);
-      for(;;){await new Promise(r=>setTimeout(r,1500));const response=await fetch(`/api/generations/${data.id}`);const job=await response.json();if(!response.ok||job.status==='failed')throw new Error(job.error??job.message);setStatus(job.message);if(job.status==='succeeded'){const next=await importer.files([new File([JSON.stringify(job.project)],'form-generated.json')],{upAxis:'Z',scale:1},setStatus);if(operation!==roomOperation.current){setStatus('Form result ignored because the room changed.');break;}setHistory(old=>({past:[...old.past,old.present].slice(-50),present:appendAssets(old.present,next),future:[]}));setSelected(workspace.items.length);setSelectedPart(-1);setStatus(`Form ${mode} project imported`);break;}}
+      for(;;){await new Promise(r=>setTimeout(r,1500));const response=await fetch(`/api/generations/${data.id}`);const job=await response.json();if(!response.ok||job.status==='failed')throw new Error(job.error??job.message);setStatus(job.message);if(job.status==='succeeded'){const next=await importer.files([new File([JSON.stringify(job.project)],'form-generated.json')],{upAxis:'Z',scale:1},setStatus);if(operation!==roomOperation.current){setStatus('Form result ignored because the room changed.');break;}change(appendAssets(latestWorkspace.current,next));setSelected(workspace.items.length);setSelectedPart(-1);setStatus(`Form ${mode} project imported`);break;}}
     }catch(e){setError((e as Error).message);setStatus('Generation failed');}finally{setBusy(false);}
   }
   async function sendAnimationFeedback(review: GifMetadata, instruction: string) {

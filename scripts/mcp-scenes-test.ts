@@ -123,12 +123,51 @@ try {
   const form = importForm({ hardware_ir_version: '0.2', overview: { title: 'Fixture machine' }, mechanical: { render_dimensions: { x_mm: 100, y_mm: 200, z_mm: 300 } } }, 'fixture.json', 'fixture-digest');
   (form as any).formProject = { projectId: 'fixture', revision: '1', ir: { runtime_config: { base_url: 'private-provider-canary', api_key: 'secret-canary' } }, source: 'raw_ir', hardwareIrVersion: '0.2' };
   const formVersion = await storage.upload({ id: form.id, asset: form, updatedAt: 0 }, () => {});
+  // Inspect actual uploaded bytes, not only the allowlisted MCP response.
+  const formBytes = await (await storage.downloadFile(formVersion, 'asset.json')).text();
+  assert(!formBytes.includes('canary')); assert(!formBytes.includes('runtime_config'));
+  const loadedForm = (await storage.load(formVersion)).asset;
+  assert.equal(loadedForm.formProject?.projectId, 'fixture'); assert.equal(loadedForm.formProject?.revision, '1');
   const formDetail = await ok('inspect_scene_asset', { version: 1, asset: { kind: 'cloud', version_id: formVersion.id } });
   assert(!JSON.stringify(formDetail).includes('canary'));
   const formRequest = { ...fixture, request_id: randomUUID(), scene: { ...fixture.scene, instances: [{ ...fixture.scene.instances[0], id: 'machine', asset: { kind: 'cloud', version_id: formVersion.id } }], animation: { duration: 2, loop: false, tracks: [{ instance_id: 'machine', part_id: form.parts[0].id, keys: [{ time: 0, position: [0, 0, 0], rotation: [0, 0, 0] }, { time: 2, position: [0, 1, 0], rotation: [0, 0, 0] }] }] } } };
   const formCreated = await ok('create_scene', formRequest);
   const formDoc: any = (await service.sql('select document from scenes where id=$1', [formCreated.scene_id])).rows[0].document;
   assert(!JSON.stringify(formDoc).includes('canary')); assert(!JSON.stringify(formDoc).includes('runtime_config'));
+  const localProject = { format: 'form-project', version: 1, project_id: 'local-project', agent: 'codex',
+    runtime_config: { provider: 'provider-canary', model: 'model-canary', base_url: 'endpoint-canary' },
+    project_ir: { hardware_ir_version: '0.2', assembly_metadata: { revision: 7, api_key: 'secret-canary' } } };
+  await writeFile(join(root, 'local-project.json'), JSON.stringify(localProject));
+  const localRead = await mcp.call('read_form_project', { path: 'local-project.json' });
+  assert(!localRead.isError); assert(!JSON.stringify(localRead).includes('canary'));
+  assert.equal(localRead.structuredContent.project_id, 'local-project');
+  const localSave = await mcp.call('save_form_project', { path: 'local-project.json', project_ir: localProject.project_ir });
+  assert(!localSave.isError);
+  const savedLocal = JSON.parse(await readFile(join(root, 'local-project.json'), 'utf8'));
+  assert(!JSON.stringify(savedLocal).includes('canary')); assert.equal(savedLocal.agent, 'codex');
+  assert.equal(savedLocal.project_ir.assembly_metadata.revision, 7);
+  // Legacy scene rows can still contain settings: test the real CLI boundaries.
+  const legacyDocument = { ...formDoc, runtime_config: localProject.runtime_config };
+  const legacySaved = await client.rpc('save_workspace_scene', { p_id: formCreated.scene_id, p_name: 'Legacy portable scene',
+    p_document: legacyDocument, p_expected_revision: 1, p_write_id: randomUUID() });
+  assert.ifError(legacySaved.error);
+  async function cli(args: string[]) {
+    const child = spawn(process.execPath, [resolve('cli/astra.mjs'), ...args], { env: { ...process.env,
+      ASTRA_CLI_CONFIG: config, VITE_SUPABASE_URL: service.origin, VITE_SUPABASE_PUBLISHABLE_KEY: 'fixture-public-key' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    children.push(child); let output = '';
+    child.stdout.on('data', chunk => { output += chunk; }); child.stderr.on('data', chunk => { output += chunk; });
+    const timeout = setTimeout(() => child.kill(), 15000);
+    try { const code = await new Promise((resolveExit, reject) => { child.once('error', reject); child.once('close', resolveExit); }); assert.equal(code, 0, output); }
+    finally { clearTimeout(timeout); }
+  }
+  const exportedRoom = join(root, 'cli-export.json');
+  await cli(['rooms', 'export', formCreated.scene_id, exportedRoom]);
+  assert(!String(await readFile(exportedRoom)).includes('canary'));
+  assert.equal(JSON.parse(await readFile(exportedRoom, 'utf8')).authoring.agent, fixture.agent);
+  await writeFile(exportedRoom, JSON.stringify(legacyDocument));
+  await cli(['rooms', 'import', exportedRoom, '--name', 'CLI portable fixture']);
+  const cliDocument: any = (await service.sql("select document from scenes where name='CLI portable fixture'")).rows[0].document;
+  assert(!JSON.stringify(cliDocument).includes('canary')); assert.equal(cliDocument.assets[0].projectRevision, '1');
   const aborted = new AbortController(); aborted.abort();
   await assert.rejects(() => executeSceneTool('astra.list_scene_assets', { version: 1 }, { client, owner, origin: 'http://localhost:5173', signal: aborted.signal }), (e: any) => e.code === 'TIMEOUT');
   for (const origin of ['file:///tmp', 'http://user:secret@localhost:5173', 'http://localhost:5173/path', 'http://example.com']) assert.throws(() => workbenchOrigin(origin));

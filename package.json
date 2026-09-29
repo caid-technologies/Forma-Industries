@@ -24,6 +24,8 @@
     "test:auth": "node scripts/auth-smoke.mjs",
     "test:storage": "tsx scripts/cloud-storage-smoke.ts",
     "test:workspace": "tsx scripts/workspace-test.ts",
+    "test:portable-scenes": "node --import tsx scripts/portable-scene-test.ts",
+    "test:portable-scenes-browser": "node --import tsx scripts/portable-scene-test.ts --browser",
     "test:workspace-live": "tsx scripts/workspace-smoke.ts",
     "test:storage-disabled": "node scripts/cloud-storage-disabled-smoke.mjs",
     "test:fullscreen": "node scripts/fullscreen-smoke.mjs && node scripts/fullscreen-import-smoke.mjs",
