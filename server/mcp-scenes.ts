@@ -10,7 +10,7 @@ import { SceneToolError, validateSceneRequest, validateSceneResult } from './mcp
 
 type AssetRef = { kind: 'cloud'; version_id: string } | { kind: 'example'; id: string };
 type Draft = { name: string; room: { width: number; depth: number; height: number }; instances: { id: string; name: string; asset: AssetRef; position: Vec3; rotation: Vec3; visible: boolean }[];
-  animation: { duration: number; loop: boolean; tracks: { instance_id: string; part_id?: string; keys: { time: number; position: Vec3; rotation: Vec3 }[] }[] } };
+  animation: { duration: number; loop: boolean; tracks: { instance_id: string; part_id?: string; keys: { time: number; position: Vec3; rotation: Vec3; visible?: boolean }[] }[] } };
 type Request = { version: 1; request_id: string; agent: string; scene: Draft; scene_id?: string; base_revision?: number; revision_id?: number; asset?: AssetRef; offset?: number };
 export type SceneContext = { client: SupabaseClient; owner: string; origin: string; signal: AbortSignal };
 const examples = [
@@ -107,7 +107,7 @@ export async function executeSceneTool(name: string, raw: unknown, ctx: SceneCon
     return { ...result(data.scene, ctx.origin), agent: typeof data.scene.document.authoring?.agent === 'string' ? data.scene.document.authoring.agent : null,
       scene: { name: data.scene.name, room: { width: manifest.room[0], depth: manifest.room[1], height: manifest.room[2] },
         instances: manifest.instances.map(item => ({ id: item.id, name: item.name, asset: { kind: 'cloud', version_id: item.cloudVersionId }, position: item.position, rotation: item.rotation, visible: item.visible })),
-        animation: { duration: manifest.animation.duration, loop: manifest.animation.loop, tracks: manifest.animation.tracks.map(track => ({ instance_id: track.instanceId, ...(track.partId ? { part_id: track.partId } : {}), keys: track.keys.map(key => ({ time: key.time, position: key.position, rotation: key.rotation })) })) } } };
+        animation: { duration: manifest.animation.duration, loop: manifest.animation.loop, tracks: manifest.animation.tracks.map(track => ({ instance_id: track.instanceId, ...(track.partId ? { part_id: track.partId } : {}), keys: track.keys.map(key => ({ time: key.time, position: key.position, rotation: key.rotation, ...(key.visible !== undefined ? { visible: key.visible } : {}) })) })) } } };
   }
   const creating = name === 'astra.create_scene';
   const sceneId = creating ? args.request_id : args.scene_id!;
@@ -131,7 +131,7 @@ export async function executeSceneTool(name: string, raw: unknown, ctx: SceneCon
   }
   // Validate the complete scene before any uploads or scene writes.
   try { hydrateManifest(readManifest(makeManifest(workspace)), workspace.items.map(item => item.asset), new Map(workspace.items.filter(item => item.cloudVersionId).map(item => [item.cloudVersionId!, item.asset]))); }
-  catch { return fail('INVALID_SCENE', 'Invalid instance IDs, animation targets, or keyframes. Targets must exist; key times must be unique and within the duration. Inspect the asset for valid part IDs.'); }
+  catch { return fail('INVALID_SCENE', 'Invalid instance IDs, animation targets, or keyframes. Targets must exist; key times must be unique and within the duration. Visibility keys must be booleans on whole-instance tracks. Inspect the asset for valid part IDs.'); }
   function documentFor(value: Workspace) {
     const manifest = makeManifest(value);
     // Source identity only; provider configuration and retained IR never enter this request document.

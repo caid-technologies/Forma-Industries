@@ -21,6 +21,9 @@ const owner = randomUUID(), other = randomUUID();
 const session = await service.account(owner), otherSession = await service.account(other);
 const config = join(root, 'auth.json'); await writeFile(config, JSON.stringify(session));
 const fixture = JSON.parse(await readFile('scripts/fixtures/cleanroom-scene-request.json', 'utf8'));
+// Optional visibility must survive the real MCP schema, cloud save, and read/update cycle.
+fixture.scene.animation.tracks[0].keys[0].visible = true;
+fixture.scene.animation.tracks[0].keys.at(-1).visible = false;
 const children: ReturnType<typeof spawn>[] = [];
 function connection(env: Record<string, string> = {}) {
   const child = spawn(process.execPath, [resolve('server/astra-mcp.mjs')], { env: { ...process.env, ASTRA_ROOT: root, ASTRA_CLI_CONFIG: config, ASTRA_SCENE_TOOLS_ENABLED: 'true', ASTRA_WORKBENCH_ORIGIN: 'http://localhost:5173', VITE_SUPABASE_URL: service.origin, VITE_SUPABASE_PUBLISHABLE_KEY: 'fixture-public-key', ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
@@ -69,6 +72,7 @@ try {
     (a: any) => { a.scene.instances[0].position = [0, null, 0]; },
     (a: any) => { a.scene.instances[0].asset = { kind: 'file', path: '../secret' }; },
     (a: any) => { a.authorization = 'secret-canary'; },
+    (a: any) => { a.scene.animation.tracks[0].keys[0].visible = 'false'; },
   ]) { const input = structuredClone(fixture); mutate(input); await bad('create_scene', input, 'INVALID_REQUEST'); }
   for (const mutate of [
     (a: any) => { a.scene.instances[1].id = a.scene.instances[0].id; },
@@ -89,6 +93,7 @@ try {
   await bad('create_scene', { ...fixture, agent: 'different' }, 'REQUEST_ID_REUSED');
   const read = await ok('read_scene', { version: 1, scene_id: created.scene_id });
   assert.deepEqual(read.scene.room, fixture.scene.room); assert.equal(read.scene.instances.length, 6); assert.equal(read.scene.animation.tracks[0].keys.length, 26);
+  assert.deepEqual(read.scene.animation.tracks, fixture.scene.animation.tracks);
   const client = createClient(service.origin, 'fixture-public-key', { global: { headers: { Authorization: `Bearer ${session.access_token}` } }, auth: { persistSession: false } });
   const storage = new CloudStorage(client, owner); const versions = await storage.list();
   const assets = await Promise.all(versions.map(async version => (await storage.load(version)).asset));
@@ -106,12 +111,15 @@ try {
   } finally { if (previousWindow) globalThis.window = previousWindow; else delete (globalThis as any).window; }
   assert.equal(doc.authoring.agent, 'fixture-agent'); assert.equal(doc.authoring.parent_revision, null);
   const update = { version: 1, request_id: randomUUID(), scene_id: created.scene_id, base_revision: 1, agent: 'second-agent', scene: structuredClone(read.scene) };
+  update.scene.animation.tracks[0].keys.at(-1).visible = true;
   update.scene.room.width = 25; update.scene.instances[2].position[0] += 1;
   const edited = await ok('update_scene', update); assert.equal(edited.revision_id, 2);
   assert.deepEqual(await ok('update_scene', update), edited);
   const conflict = await bad('update_scene', { ...update, request_id: randomUUID() }, 'CONFLICT'); assert.equal(conflict.current_revision, 2);
   assert.equal((await ok('read_scene', { version: 1, scene_id: created.scene_id, revision_id: 1 })).scene.room.width, fixture.scene.room.width);
   assert.equal((await ok('read_scene', { version: 1, scene_id: created.scene_id })).scene.room.width, 25);
+  assert.equal((await ok('read_scene', { version: 1, scene_id: created.scene_id, revision_id: 1 })).scene.animation.tracks[0].keys.at(-1).visible, false);
+  assert.equal((await ok('read_scene', { version: 1, scene_id: created.scene_id })).scene.animation.tracks[0].keys.at(-1).visible, true);
   assert.equal((await counts()).revisions, 2); assert.equal((await counts()).versions, 3);
   await writeFile(config, JSON.stringify(otherSession));
   await bad('read_scene', { version: 1, scene_id: created.scene_id }, 'SCENE_UNAVAILABLE');
@@ -131,6 +139,9 @@ try {
   const formDetail = await ok('inspect_scene_asset', { version: 1, asset: { kind: 'cloud', version_id: formVersion.id } });
   assert(!JSON.stringify(formDetail).includes('canary'));
   const formRequest = { ...fixture, request_id: randomUUID(), scene: { ...fixture.scene, instances: [{ ...fixture.scene.instances[0], id: 'machine', asset: { kind: 'cloud', version_id: formVersion.id } }], animation: { duration: 2, loop: false, tracks: [{ instance_id: 'machine', part_id: form.parts[0].id, keys: [{ time: 0, position: [0, 0, 0], rotation: [0, 0, 0] }, { time: 2, position: [0, 1, 0], rotation: [0, 0, 0] }] }] } } };
+  const invalidPartVisibility = structuredClone(formRequest);
+  (invalidPartVisibility.scene.animation.tracks[0].keys[0] as any).visible = false;
+  await bad('create_scene', invalidPartVisibility, 'INVALID_SCENE');
   const formCreated = await ok('create_scene', formRequest);
   const formDoc: any = (await service.sql('select document from scenes where id=$1', [formCreated.scene_id])).rows[0].document;
   assert(!JSON.stringify(formDoc).includes('canary')); assert(!JSON.stringify(formDoc).includes('runtime_config'));

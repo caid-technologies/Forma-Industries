@@ -5,7 +5,7 @@ import { parseCloudBundle, scrubCloudData } from './cloud-storage';
 export type VersionedAsset = { cloudVersionId: string; asset: Asset };
 export type Pose = { position: Vec3; rotation: Vec3 };
 export type SceneItem = Pose & { id: string; name: string; asset: Asset; visible: boolean; cloudVersionId?: string; missing?: boolean };
-export type Keyframe = Pose & { id: string; time: number };
+export type Keyframe = Pose & { id: string; time: number; visible?: boolean };
 export type Track = { id: string; instanceId: string; partId?: string; keys: Keyframe[] };
 export type Animation = { duration: number; loop: boolean; tracks: Track[] };
 export type Workspace = { room: Vec3; items: SceneItem[]; animation: Animation };
@@ -56,14 +56,23 @@ function sample(track: Track, time: number): Pose {
   return { position: a.position.map((n, i) => n + (b.position[i] - n) * t) as Vec3,
     rotation: [euler.x, euler.y, euler.z].map(MathUtils.radToDeg) as Vec3 };
 }
+/** Visibility is a held value: omitted keys inherit the last explicit key or base layout. */
+function sampleVisibility(track: Track, time: number, base: boolean): boolean {
+  let latest: Keyframe | undefined;
+  for (const key of track.keys) {
+    if (key.visible !== undefined && key.time <= time && (!latest || key.time > latest.time)) latest = key;
+  }
+  return latest?.visible ?? base;
+}
 export function evaluateWorkspace(items: SceneItem[], animation: Animation, time: number | null): EvaluatedPose[] {
   return items.map(item => {
-    let pose: Pose = item; const parts: Record<string, Pose> = {};
+    let pose: Pose = item; let visible = item.visible; const parts: Record<string, Pose> = {};
     if (time !== null) for (const track of animation.tracks) {
       if (track.instanceId !== item.id || !track.keys.length) continue;
-      if (track.partId) parts[track.partId] = sample(track, time); else pose = sample(track, time);
+      if (track.partId) parts[track.partId] = sample(track, time);
+      else { pose = sample(track, time); visible = sampleVisibility(track, time, item.visible); }
     }
-    return { position: [...pose.position], rotation: [...pose.rotation], visible: item.visible, parts };
+    return { position: [...pose.position], rotation: [...pose.rotation], visible, parts };
   });
 }
 export function writeKeyframe(animation: Animation, instanceId: string, partId: string | undefined, key: Keyframe): Animation {
@@ -115,6 +124,7 @@ export function readManifest(value: unknown): SceneManifest {
     for (const key of track.keys) {
       if (++keyCount > 10000 || !validString(key.id) || keyIds.has(key.id) || !Number.isFinite(key.time) || key.time < 0 || key.time > m.animation.duration || times.has(key.time)
           || !validVector(key.position) || !validVector(key.rotation)) throw new Error('Invalid keyframe value or duplicate keyframe time.');
+      if (key.visible !== undefined && (typeof key.visible !== 'boolean' || track.partId !== undefined)) throw new Error('Keyframe visibility must be a boolean on a whole-instance track.');
       times.add(key.time); keyIds.add(key.id);
     }
   }
