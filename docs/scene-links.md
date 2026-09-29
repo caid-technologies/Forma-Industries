@@ -10,7 +10,7 @@ Cloud saves return two URLs:
 
 In **Save / open scenes**, save the scene and use **Copy private revision link**. To let someone else view it, choose **Create shared revision link**, then **Copy shared link**. The UI creates a link lasting seven days. **Revoke all shared links** invalidates every share for that scene, including older revisions. Sharing a revision does not share future edits or grant editing permission.
 
-Include cloud geometry when saving for another browser/device. Metadata-only scenes retain their layout and animation but show labeled missing-geometry placeholders on another device. The viewer reports unavailable assets, missing revisions, sign-in/access errors, and expired or revoked shares. Generated local-only architecture still requires portable JSON export; this change does not make those assets uploadable.
+Include cloud geometry when saving for another browser/device. Metadata-only scenes retain their layout and animation but show labeled missing-geometry placeholders on another device. The viewer reports unavailable assets, missing revisions, sign-in/access errors, and expired or revoked shares. Supported generated architecture is uploadable after migration `20260929100000_generated_scene_assets.sql`; its synthetic provenance is preserved. Portable JSON remains available without cloud services.
 
 ## Workspace isolation
 
@@ -35,7 +35,7 @@ const scene = Array.isArray(result.data) ? result.data[0] : result.data;
 const revisionUrl = new URL(scene.revision_url, workbenchOrigin).href;
 ```
 
-`SceneRepository.save()` and `.duplicate()` return absolute URLs in the browser, or when passed a fourth constructor argument specifying the workbench origin. The local stdio `astra.create_room` tool still creates local JSON only; cloud MCP authoring is a separate workstream under #62.
+`SceneRepository.save()` and `.duplicate()` return absolute URLs in the browser, or when passed a fourth constructor argument specifying the workbench origin. The local stdio `astra.create_room` tool creates local JSON only. The separate `astra.create_scene` and `astra.update_scene` tools persist complete scenes and return these URLs; see [MCP scene authoring](mcp-scenes.md).
 
 Read a cloud snapshot with `get_workspace_scene(p_id, p_revision, p_share_token)`. A null revision selects the head for the owner. A share requires both the exact revision and its token. Responses contain `scene` and only that revision's retained asset versions. Private reads require the user's JWT; never give an agent a service-role key.
 

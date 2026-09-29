@@ -48,6 +48,8 @@ Use the `/forma-demo` command in OpenCode. It compiles a validated project to `d
 
 OpenCode now connects to both local servers: Forma provides equipment authoring and validation, while Astra exposes room creation, animation feedback, compiled-artifact handoff, and space-brief tools. Verify both with `opencode mcp list` before starting the demo.
 
+For typed scene creation and revision updates with private local-workbench URLs, see [external-agent scene authoring](mcp-scenes.md). The empty local-file tools below remain available independently.
+
 ## Create rooms through MCP
 
 Ask your connected agent: **“Create a room called Maker lab, 9 meters wide, 7 meters deep, and 3.2 meters high.”** The agent can call:
@@ -103,7 +105,7 @@ Open `/?scene=cleanroom` to load the bundled cleanroom POC example from `public/
 
 - Forma: Hardware IR 0.1/0.2, `project_ir` / `hardware_ir` wrappers, `forma-project` manifest v1, and `forma.project` namespace objects. Object versions are revision counters. Mechanical placements and inline CAD mesh vertices use millimeters with Z up.
 - SDK/agent handoff: see [`docs/forma-handoff.md`](forma-handoff.md) for the canonical compiled artifact contract used by the Forma SDK, OpenCode, and Codex.
-- Generated architectural assets use the `generated` source variant in bundled Astra scenes. They render in the local workbench but are not Forma-authored hardware or cloud-uploadable Forma/STEP assets.
+- Generated architectural assets use the `generated` source variant in bundled Astra scenes. They are explicitly synthetic architecture, not Forma-authored hardware or STEP CAD. With migration `20260929100000_generated_scene_assets.sql`, supported `forma-industries` generated geometry can be uploaded and reopened through private scene URLs.
 - Select referenced STEP artifacts together with their Forma JSON. Missing CAD falls back to labeled mechanical envelopes when available; otherwise the import reports an error. Remote CAD URLs and server-local paths are not fetched automatically.
 - STEP: `.step` and `.stp` Part 21 files are converted with `occt-import-js@0.0.23`. OpenCascade reads source units; the UI provides source-up-axis and scale correction. Geometry conversion runs in an isolated worker with a 120-second timeout. Successful conversions are cached for repeated imports.
 - Scene asset schema v1: stable content-derived asset/part IDs, source filename/digest/project identity, named hierarchy, indexed triangle meshes, dimensions, and warnings. All geometry is normalized to meters, Y up, centered in X/Z and floor-aligned; `originOffset` retains the original normalization offset. Metadata is allowlisted for display.
