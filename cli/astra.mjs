@@ -112,6 +112,7 @@ async function exportRoom(id, path) {
 }
 async function importRoom(path, name) {
   const { supabase } = await sessionClient(); const document = cloudDocument(readJson(path));
+  if (document.assets.some(asset => asset.source.kind === 'generated')) throw new Error('Generated architecture is local-only. Open the portable scene JSON in the browser workbench instead.');
   const { data: userData, error: userError } = await supabase.auth.getUser(); if (userError || !userData.user) throw new Error('Astra account could not be read.');
   const assets = (document.assets || []).map(asset => ({ owner_id: userData.user.id, asset_key: asset.id, name: asset.name, source_kind: asset.source.kind, metadata: { dimensions: asset.dimensions, source: asset.source } }));
   if (assets.length) { const result = await supabase.from('assets').upsert(assets, { onConflict: 'owner_id,asset_key' }); if (result.error) throw new Error(result.error.message); }

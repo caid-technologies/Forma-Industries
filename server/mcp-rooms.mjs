@@ -3,6 +3,7 @@ import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileS
 import { join } from 'node:path';
 
 const dimension = { type: 'number', minimum: 1, maximum: 100 };
+const maxRoomFileBytes = 25 * 1024 * 1024;
 export const roomTools = [
   { name: 'astra.create_room', description: 'Create an empty room as a local Astra scene JSON, ready to import into the workbench and arrange equipment. Dimensions are meters. Does not modify the open browser room or save to cloud.', inputSchema: { type: 'object', additionalProperties: false, properties: { name: { type: 'string', minLength: 1, maxLength: 120 }, width: dimension, depth: dimension, height: dimension }, required: ['name', 'width', 'depth', 'height'] } },
   { name: 'astra.list_rooms', description: 'List rooms created through this local MCP checkout.', inputSchema: { type: 'object', properties: {}, additionalProperties: false } },
@@ -24,7 +25,7 @@ function readRoom(dir, id) {
   const path = join(dir, `${id}.json`);
   if (!existsSync(path)) throw new Error('Local MCP room not found.');
   const stat = lstatSync(path);
-  if (stat.isSymbolicLink() || !stat.isFile() || stat.size > 1024 * 1024) throw new Error('Invalid local MCP room file.');
+  if (stat.isSymbolicLink() || !stat.isFile() || stat.size > maxRoomFileBytes) throw new Error('Invalid local MCP room file.');
   const doc = JSON.parse(readFileSync(path, 'utf8'));
   if (doc.id !== id || doc.format !== 'astra.scene' || doc.version !== 1) throw new Error('Invalid local MCP room document.');
   return doc;

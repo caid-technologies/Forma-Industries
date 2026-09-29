@@ -128,12 +128,15 @@ astra rooms export <room-id> .\astra-scene.json
 astra auth logout
 ```
 
-The browser workbench remains the local room editor and can import/export portable scene JSON without signing in. The CLI transfers those manifests to and from cloud; binary geometry is not uploaded by the CLI and can be attached from Astra when cloud storage is enabled.
+The browser workbench remains the local room editor and can import/export portable scene JSON without signing in. To view a local room, choose **Drop files or browse** and open its `.astra/rooms/<id>.json` scene. The CLI transfers those manifests to and from cloud; binary geometry is not uploaded by the CLI and can be attached from Astra when cloud storage is enabled.
+
+Open `/?scene=cleanroom` to load the bundled cleanroom POC example from `public/examples/cleanroom/cleanroom-suite.json`. It shows four 20×20 ft rooms, four imported stainless workbenches, and the Forma swab-sampling robot. The personnel doors are 1.2 m wide so the 0.995 m robot envelope can pass in this POC. The schedule sends it into Room A for two samples, skips occupied Room B, then enters Room C for two samples when its access window opens. The one-shot animation maps 1 timeline second to 1 scheduled minute from 09:00 and parks the robot after its route. The imported robot STEP is a mostly fused pose, so sample contact is shown by a short approach/retract rather than articulated arm joints. The route bypasses the saved workspace without replacing it; its schedule and geometry are example data, not manufacturing approval.
 
 ## Import contracts
 
 - Forma: Hardware IR 0.1/0.2, `project_ir` / `hardware_ir` wrappers, `forma-project` manifest v1, and `forma.project` namespace objects. Object versions are revision counters. Mechanical placements and inline CAD mesh vertices use millimeters with Z up.
 - SDK/agent handoff: see [`docs/forma-handoff.md`](docs/forma-handoff.md) for the canonical compiled artifact contract used by the Forma SDK, OpenCode, and Codex.
+- Generated architectural assets use the `generated` source variant in bundled Astra scenes. They render in the local workbench but are not Forma-authored hardware or cloud-uploadable Forma/STEP assets.
 - Select referenced STEP artifacts together with their Forma JSON. Missing CAD falls back to labeled mechanical envelopes when available; otherwise the import reports an error. Remote CAD URLs and server-local paths are not fetched automatically.
 - STEP: `.step` and `.stp` Part 21 files are converted with `occt-import-js@0.0.23`. OpenCascade reads source units; the UI provides source-up-axis and scale correction. Geometry conversion runs in an isolated worker with a 120-second timeout. Successful conversions are cached for repeated imports.
 - Scene asset schema v1: stable content-derived asset/part IDs, source filename/digest/project identity, named hierarchy, indexed triangle meshes, dimensions, and warnings. All geometry is normalized to meters, Y up, centered in X/Z and floor-aligned; `originOffset` retains the original normalization offset. Metadata is allowlisted for display.

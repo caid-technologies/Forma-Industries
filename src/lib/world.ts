@@ -12,7 +12,7 @@ export function createWorld(assets: Asset[], room: number[], selected = -1, sele
   const environment = new THREE.Group();
   const floor = new THREE.Mesh(new THREE.BoxGeometry(room[0], .025, room[1]), new THREE.MeshStandardMaterial({ color: '#34433c', roughness: .95 }));
   floor.position.y = -.018; environment.add(floor);
-  environment.add(new THREE.GridHelper(Math.max(room[0], room[1]), Math.max(2, Math.round(Math.max(room[0], room[1]) * 2)), 0x82917b, 0x46594d));
+  if (!assets.some(asset => asset.source.kind === 'generated')) environment.add(new THREE.GridHelper(Math.max(room[0], room[1]), Math.max(2, Math.round(Math.max(room[0], room[1]) * 2)), 0x82917b, 0x46594d));
   const box = new THREE.BoxGeometry(room[0], room[2], room[1]);
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0x7e9784, transparent: true, opacity: .35 }));
   box.dispose(); edges.position.y = room[2] / 2; environment.add(edges);
