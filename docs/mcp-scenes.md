@@ -1,6 +1,6 @@
 # Author scenes from an external agent
 
-Astra's local stdio MCP server lets an external agent discover assets, create a scene, read it, and save an edit as a new revision. The workbench runs locally; saved scenes and geometry use your configured Supabase backend. No in-app chat, provider SDK, or live LLM is required.
+Mergence's local stdio MCP server lets an external agent discover assets, create a scene, read it, and save an edit as a new revision. The workbench runs locally; saved scenes and geometry use your configured Supabase backend. No in-app chat, provider SDK, or live LLM is required.
 
 ## Setup
 
@@ -23,9 +23,9 @@ Astra's local stdio MCP server lets an external agent discover assets, create a 
      "mcpServers": {
        "astra": {
          "command": "node",
-         "args": ["/absolute/path/Forma-Industries/server/astra-mcp.mjs"],
+         "args": ["/absolute/path/Form-Industries/server/astra-mcp.mjs"],
          "env": {
-           "ASTRA_ROOT": "/absolute/path/Forma-Industries",
+           "ASTRA_ROOT": "/absolute/path/Form-Industries",
            "ASTRA_SCENE_TOOLS_ENABLED": "true"
          }
        }
@@ -33,7 +33,7 @@ Astra's local stdio MCP server lets an external agent discover assets, create a 
    }
    ```
 
-Use your checkout's absolute path (on Windows, forward slashes such as `C:/projects/Forma-Industries` work). Restart the MCP server after configuration changes. Hosts limited to remote MCP need a separate trusted transport adapter; this repository supplies only local stdio. Connect any compatible agent through that host; Astra does not contact an LLM.
+Use your checkout's absolute path (on Windows, forward slashes such as `C:/projects/Form-Industries` work). Restart the MCP server after configuration changes. Hosts limited to remote MCP need a separate trusted transport adapter; this repository supplies only local stdio. Connect any compatible agent through that host; Mergence does not contact an LLM.
 
 ## Tools and schemas
 
@@ -42,12 +42,12 @@ Use your checkout's absolute path (on Windows, forward slashes such as `C:/proje
 | Tool | Input and result |
 | --- | --- |
 | `astra.list_scene_assets` | List ready immutable versions owned by the CLI account, plus three bundled cleanroom examples. Pass `next_offset` as `offset` for another page. |
-| `astra.inspect_scene_asset` | Pass an `asset` reference to inspect dimensions, provenance, warnings, and valid part IDs for animation. Raw Forma IR and provider configuration are omitted. |
+| `astra.inspect_scene_asset` | Pass an `asset` reference to inspect dimensions, provenance, warnings, and valid part IDs for animation. Raw Form IR and provider configuration are omitted. |
 | `astra.create_scene` | Pass `request_id`, `agent`, and a complete `scene`. The caller-generated UUID `request_id` becomes the stable scene ID. |
 | `astra.read_scene` | Pass `scene_id` and optionally `revision_id`. Returns a typed scene with immutable cloud asset references, ready to edit. |
 | `astra.update_scene` | Pass `scene_id`, explicit `base_revision`, a new UUID `request_id`, `agent`, and the complete replacement `scene`. |
 
-Asset references are either `{"kind":"cloud","version_id":"<uuid>"}` or `{"kind":"example","id":"cleanroom-architecture"}`. The other example IDs are `cleanroom-robot` and `cleanroom-desk`. To use your own Forma or STEP model, import it in the workbench, upload a cloud copy, then discover/inspect its version. Tools do not accept file paths, arbitrary download URLs, credentials, or raw geometry.
+Asset references are either `{"kind":"cloud","version_id":"<uuid>"}` or `{"kind":"example","id":"cleanroom-architecture"}`. The other example IDs are `cleanroom-robot` and `cleanroom-desk`. To use your own Form or STEP model, import it in the workbench, upload a cloud copy, then discover/inspect its version. Tools do not accept file paths, arbitrary download URLs, credentials, or raw geometry.
 
 Positions and dimensions use meters in a Y-up world. Room fields are `width` (X), `depth` (Z), and `height` (Y). Rotations are Euler XYZ degrees, matching the workbench. Instance poses are absolute; component keyframes are local to their instance. `visible` is required. Omit `animation` for a static scene (three-second timeline, no tracks); otherwise provide `duration`, `loop`, and `tracks`. Each track targets `instance_id` and optionally `part_id`, with keys containing `time`, `position`, and `rotation`. Mission routes use these same animation tracks.
 
@@ -77,9 +77,9 @@ The result includes `version`, `scene_id`, numeric `revision_id`, `head_url`, `r
 
 ## Persistence, recovery, and limits
 
-Scene writes use the existing `save_workspace_scene` RPC, immutable revision snapshots, and owner-scoped asset versions. Geometry is verified for size, SHA-256, identity, topology, and supported provenance before use. The cleanroom architecture remains explicitly `generated` with generator `forma-industries`; it is synthetic architectural geometry, not Forma-authored hardware or STEP CAD. Generated assets now use the same private immutable Storage lifecycle after the new migration. Example imports upload only the selected bundled assets.
+Scene writes use the existing `save_workspace_scene` RPC, immutable revision snapshots, and owner-scoped asset versions. Geometry is verified for size, SHA-256, identity, topology, and supported provenance before use. The cleanroom architecture remains explicitly `generated` with generator `form-industries`; it is synthetic architectural geometry, not Form-authored hardware or STEP CAD. Generated assets now use the same private immutable Storage lifecycle after the new migration. Example imports upload only the selected bundled assets.
 
-Each snapshot records `authoring.via`, the caller's descriptive `agent` label, `parent_revision`, `request_id`, and a request digest. The label is not an authenticated agent identity. History browsing, diff, and restore remain separate work under #66. The broader retained-Forma-data sanitization work remains #37; these tools expose only allowlisted scene/source fields and never return raw retained project documents.
+Each snapshot records `authoring.via`, the caller's descriptive `agent` label, `parent_revision`, `request_id`, and a request digest. The label is not an authenticated agent identity. History browsing, diff, and restore remain separate work under #66. The broader retained-Form-data sanitization work remains #37; these tools expose only allowlisted scene/source fields and never return raw retained project documents.
 
 Failed tools set `isError: true` and return `{"error":{"code":"…","message":"…"}}`; conflicts also include `current_revision` when available.
 
@@ -110,4 +110,4 @@ npx playwright install chromium
 npm run test:mcp-scenes-browser
 ```
 
-The integration suite launches the real stdio server and Supabase client against a local HTTP facade backed by the actual migrations in PGlite/PostgreSQL. It tests generated/STEP/Forma geometry, create/read/update, immutable revisions, schema validation, stale conflicts, interrupted-upload retries, missing sessions, account switching, and sanitized responses. The browser variant also opens an MCP-returned revision URL in a fresh signed-in browser and verifies the six cleanroom instances and robot animation. `ASTRA_CHROME_PATH` can select an installed Chromium executable. These tests use fixture authentication and local Storage emulation; they make no live Supabase or LLM calls.
+The integration suite launches the real stdio server and Supabase client against a local HTTP facade backed by the actual migrations in PGlite/PostgreSQL. It tests generated/STEP/Form geometry, create/read/update, immutable revisions, schema validation, stale conflicts, interrupted-upload retries, missing sessions, account switching, and sanitized responses. The browser variant also opens an MCP-returned revision URL in a fresh signed-in browser and verifies the six cleanroom instances and robot animation. `ASTRA_CHROME_PATH` can select an installed Chromium executable. These tests use fixture authentication and local Storage emulation; they make no live Supabase or LLM calls.

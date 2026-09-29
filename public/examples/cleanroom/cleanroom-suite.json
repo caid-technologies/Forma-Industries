@@ -19,7 +19,7 @@
         "kind": "generated",
         "filename": "cleanroom-suite-doubled.generated.json",
         "digest": "fe67e511747730ab99ff8cdf253f4ea375e3e51de60960c97e461f4015929783",
-        "generator": "forma-industries"
+        "generator": "form-industries"
       },
       "dimensions": [
         24.384000778198242,
@@ -75,7 +75,7 @@
     },
     {
       "id": "49dce8c4-23db-4f3e-9d6d-0bcfb2369d33",
-      "name": "Forma Swab-Sampling Robot",
+      "name": "Form Swab-Sampling Robot",
       "assetId": "step-37e1e7bcb93047a3ba6e9effe16675d430b1aee09b692806fdb0ec4e1c700cf8-Z-1",
       "position": [
         -3.048,
@@ -538,7 +538,7 @@
         "kind": "generated",
         "filename": "cleanroom-suite-doubled.generated.json",
         "digest": "fe67e511747730ab99ff8cdf253f4ea375e3e51de60960c97e461f4015929783",
-        "generator": "forma-industries"
+        "generator": "form-industries"
       },
       "parts": [
         {

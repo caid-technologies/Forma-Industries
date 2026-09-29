@@ -2,7 +2,7 @@
 
 ## Complete workflow
 
-1. Generate projects in Forma separately, then import the compiled JSON and any companion STEP files into Astra.
+1. Generate projects in Form separately, then import the compiled JSON and any companion STEP files into Mergence.
 2. Select a scene instance. Edit its base XYZ position and rotation, rename it, duplicate it, change visibility, or delete it. Undo/redo retains up to 50 workspace edits. Reset puts that instance at the world origin with zero rotation.
 3. Choose **Animate**. Select the whole instance or a component target. Set a time, edit keyframe position/rotation, and click **Add / update keyframe**. A key at the same time is replaced. Existing key buttons seek to their time; their delete buttons remove them.
 4. Play/pause, scrub, or reset to the base layout. **GIF studio → Authored timeline animation** exports a selected time range (up to 4 seconds), with per-frame instance/component transforms in the review JSON. Ordinary turntables use the currently previewed pose, or base poses when the timeline is reset.
@@ -15,7 +15,7 @@ The automatic IndexedDB drafts from #39 are retained and upgraded: the complete 
 
 `Workspace` owns room dimensions, `SceneItem[]`, and an `Animation` document. Each item has a stable UUID, a reference to immutable imported geometry, a display name, base position/rotation, visibility, and optionally a cloud file-version ID. Repeated instances share source geometry but have independent identities and transforms. All import/library/cloud entry points use the same placement function; new assets are placed to the right of existing bounds with a gap.
 
-The viewport and GIF renderer both use `evaluateWorkspace` and `applyWorldPoses`. Renderers never mutate imported Forma data. The viewport keeps its renderer/camera alive while transforms or timeline time change; ordinary edits do not repeatedly recreate WebGL contexts or reset camera navigation.
+The viewport and GIF renderer both use `evaluateWorkspace` and `applyWorldPoses`. Renderers never mutate imported Form data. The viewport keeps its renderer/camera alive while transforms or timeline time change; ordinary edits do not repeatedly recreate WebGL contexts or reset camera navigation.
 
 Positions are meters with Y up. Instance rotations are XYZ Euler degrees. Keyframe positions interpolate linearly; rotations use shortest-path quaternion interpolation. Poses hold the first/last key outside the keyed interval. Instance keys are absolute world poses; component keys are offsets from imported geometry, rotated about the component's center. This is visual animation, not physics or electrical revalidation.
 
@@ -32,11 +32,11 @@ Tracks target stable instance IDs and optional source part IDs. Deleting an inst
 - Deleting a scene releases references, not shared geometry files. Object deletion is blocked while another scene references the version.
 - Sign-out/account changes clear the active workspace, scene selection, and user-specific cloud lists. Source files already explicitly stored in the device library remain local files.
 
-Opening a metadata-only scene on a device without the source files produces labeled red **missing geometry placeholders** at the saved transforms. Reimporting the exact original asset replaces placeholders while retaining instance IDs and animation. Missing geometry cannot be exported as a review GIF. Source digests, project IDs, and Forma revision numbers identify the expected design. Cloud files are downloaded and integrity-checked when storage is enabled.
+Opening a metadata-only scene on a device without the source files produces labeled red **missing geometry placeholders** at the saved transforms. Reimporting the exact original asset replaces placeholders while retaining instance IDs and animation. Missing geometry cannot be exported as a review GIF. Source digests, project IDs, and Form revision numbers identify the expected design. Cloud files are downloaded and integrity-checked when storage is enabled.
 
 Scene lists and the metadata catalog currently show the latest 200 records. Binary files keep the storage feature's 25 MiB/file and 50 MiB/bundle limits; scene JSON in Postgres is limited to 2 MiB and 1,000 instances. Local portable scene files are limited to 75 MiB on import. Animation documents allow up to 120 seconds, 1,000 tracks, and 10,000 keys. Large models still require practical performance validation on the target hardware.
 
-## Forma data and inspector
+## Form data and inspector
 
 The importer retains sanitized source documents and a known-field IR model. Raw IR, project/hardware wrappers, compiled manifests, and namespace objects preserve overview, component identities, BOM, validation, project revision, agent provenance, and artifact declarations. Namespace BOM/validation payloads and companion-CAD projects retain their metadata. Credential-like fields are excluded.
 
@@ -50,12 +50,12 @@ The inspector presents labeled overview/source data, severity-tagged validation,
 - `npm run test:workspace-live`: real Supabase Auth/Postgres/Storage with isolated Chrome contexts. Set the test-only keys documented in `cloud-storage.md`. Verifies timeline/GIF frame agreement, cloud save/reopen, shared file protection, conflicts, user isolation, portable scene JSON, and missing geometry restoration. Test data is cleaned up.
 - Existing Auth, fullscreen, CAD, GIF and import smoke tests remain applicable.
 
-## Forma animation feedback
+## Form animation feedback
 
-GIF studio's authored-animation export records the evaluated frame poses. **Send feedback to Forma** stores those poses, the animation manifest, source identities, and a user instruction in `.astra/feedback/latest.json`. The local OpenCode command `/forma-feedback` consumes that package and calls Forma's `forma.opencode.update_project` MCP tool. Astra then reimports the revised compiled project for another animation review. The package is scrubbed for credential-like fields and is not sent to cloud automatically.
+GIF studio's authored-animation export records the evaluated frame poses. **Send feedback to Form** stores those poses, the animation manifest, source identities, and a user instruction in `.astra/feedback/latest.json`. The local OpenCode command `/form-feedback` consumes that package and calls Form's `form.opencode.update_project` MCP tool. Mergence then reimports the revised compiled project for another animation review. The package is scrubbed for credential-like fields and is not sent to cloud automatically.
 
 ## CLI room transfer
 
-The `astra` CLI uses the same Supabase Auth account as the browser. `astra auth login` uses GitHub OAuth through a local callback, `astra rooms list` lists owned cloud rooms, `astra rooms export` downloads a portable manifest, `astra rooms import` saves a local manifest as a new cloud room, and `astra rooms validate` checks a local file without network access. CLI cloud transfer deliberately excludes binary geometry; geometry upload remains an authenticated Astra browser operation through the existing storage policy.
+The `astra` CLI uses the same Supabase Auth account as the browser. `astra auth login` uses GitHub OAuth through a local callback, `astra rooms list` lists owned cloud rooms, `astra rooms export` downloads a portable manifest, `astra rooms import` saves a local manifest as a new cloud room, and `astra rooms validate` checks a local file without network access. CLI cloud transfer deliberately excludes binary geometry; geometry upload remains an authenticated Mergence browser operation through the existing storage policy.
 
 `ASTRA_BASE_URL` can point the live workspace test to the deployed app. Use a dedicated test project for new deployments and never place test admin credentials in Vite environment variables.

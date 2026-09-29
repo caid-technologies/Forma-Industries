@@ -19,7 +19,7 @@ const room = object(Object.fromEntries(['width', 'depth', 'height'].map(k => [k,
 export const sceneDraft = object({ name: label, room, instances: array(instance, 1000), animation }, ['name', 'room', 'instances']);
 const common = { version: { const: 1 }, request_id: uuid, scene: sceneDraft, agent: { type: 'string', minLength: 1, maxLength: 80, pattern: '^[a-zA-Z0-9_. -]+$' } };
 const written = object({ version: { const: 1 }, scene_id: uuid, revision_id: { type: 'integer', minimum: 1 }, head_url: { type: 'string' }, revision_url: { type: 'string' }, access: { const: 'owner' } });
-const summaryFields = { asset: assetReference, asset_id: id, name: label, source_kind: { enum: ['forma', 'step', 'generated'] } };
+const summaryFields = { asset: assetReference, asset_id: id, name: label, source_kind: { enum: ['form', 'step', 'generated'] } };
 const summary = object(summaryFields);
 const detail = object({ ...summaryFields, dimensions: vector, parts: array(object({ id, name: { type: 'string' }, representation: { type: 'string' } }), 10000), warnings: array({ type: 'string' }, 1000), provenance: object({ filename: { type: 'string' }, digest: { type: 'string' }, project_id: { type: 'string' }, project_revision: { type: 'string' }, generator: { type: 'string' } }, ['filename', 'digest']) });
 export const sceneTools = [

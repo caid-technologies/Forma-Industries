@@ -124,7 +124,7 @@ export async function createDoubledCleanroomAsset(): Promise<Asset> {
   const digest = await digestBytes(new TextEncoder().encode(JSON.stringify(parts)).buffer as ArrayBuffer);
   return finalizeAsset({
     id: 'generated-cleanroom-doubled-v1', name: 'Doubled cleanroom architecture',
-    source: { kind: 'generated', filename: 'cleanroom-suite-doubled.generated.json', digest, generator: 'forma-industries' },
+    source: { kind: 'generated', filename: 'cleanroom-suite-doubled.generated.json', digest, generator: 'form-industries' },
     parts, hierarchy: { id: 'cleanroom-root', name: 'Cleanroom suite', partIds: parts.map(part => part.id), children: [] },
     warnings: ['Procedural architectural visualization only. Verify room clear dimensions, cleanroom classification, egress, HVAC, and construction requirements with qualified professionals.'],
   });

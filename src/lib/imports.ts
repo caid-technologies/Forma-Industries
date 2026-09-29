@@ -1,4 +1,4 @@
-import { cadFileReference, importForma, readFormaDocument, record } from './forma';
+import { cadFileReference, importForm, readFormDocument, record } from './form';
 import { checkFile, digestBytes, type Asset } from './scene';
 import { convertStep, stepToAsset, type StepOptions, type StepResult } from './step';
 
@@ -24,11 +24,11 @@ export class ImportService {
 
   async files(files: File[], options: StepOptions, progress: (message: string) => void): Promise<Asset[]> {
     const inputs = files.filter(f => /\.(json|step|stp)$/i.test(f.name));
-    if (!inputs.length) throw new Error('Choose a Forma .json project or a .step / .stp file.');
+    if (!inputs.length) throw new Error('Choose a Form .json project or a .step / .stp file.');
     if (inputs.reduce((sum, f) => sum + f.size, 0) > 75 * 1024 * 1024) throw new Error('Import batch exceeds 75 MiB. Import fewer files at a time.');
     const jsonFiles = inputs.filter(f => /\.json$/i.test(f.name));
     // A folder may contain unrelated JSON; the canonical manifest is its entry point.
-    const projects = jsonFiles.some(f => f.name === 'forma-project.json') ? jsonFiles.filter(f => f.name === 'forma-project.json') : jsonFiles;
+    const projects = jsonFiles.some(f => f.name === 'form-project.json') ? jsonFiles.filter(f => f.name === 'form-project.json') : jsonFiles;
     const used = new Set<File>();
     const assets: Asset[] = [];
     for (const file of projects) {
@@ -38,7 +38,7 @@ export class ImportService {
       let input: unknown;
       try { input = JSON.parse(new TextDecoder().decode(bytes)); } catch { throw new Error(`${file.name} is not valid JSON.`); }
       const digest = await digestBytes(bytes);
-      const doc = readFormaDocument(input, file.name);
+      const doc = readFormDocument(input, file.name);
       const reference = cadFileReference(doc.cad);
       const normalized = reference?.replace(/\\/g, '/').split('?')[0];
       const isRemoteReference = normalized ? /^(?:[a-z]+:)?\/\//i.test(normalized) : false;
@@ -59,16 +59,16 @@ export class ImportService {
         if (declarations.length > 1) throw new Error(`Ambiguous artifact declarations for ${cad.name}.`);
         const declaration = declarations[0];
         if (declaration?.sha256 && String(declaration.sha256).toLowerCase() !== await digestBytes(await cad.arrayBuffer())) {
-          throw new Error(`Integrity check failed for ${cad.name}: bytes do not match the Forma manifest SHA-256.`);
+          throw new Error(`Integrity check failed for ${cad.name}: bytes do not match the Form manifest SHA-256.`);
         }
-        // Forma mechanical data is always Z-up; standalone STEP options do not change that contract.
+        // Form mechanical data is always Z-up; standalone STEP options do not change that contract.
         const geometry = await this.step(cad, { upAxis: 'Z', scale: 1 }, progress);
-        assets.push({ ...geometry, id: `forma-${digest}-${geometry.source.digest}`, name: doc.name,
-          formaProject: doc.project,
-          source: { kind: 'forma', filename: file.name, digest, projectId: doc.projectId, version: doc.version } });
+        assets.push({ ...geometry, id: `form-${digest}-${geometry.source.digest}`, name: doc.name,
+          formProject: doc.project,
+          source: { kind: 'form', filename: file.name, digest, projectId: doc.projectId, version: doc.version } });
         used.add(cad);
       } else {
-        assets.push(importForma(input, file.name, digest));
+        assets.push(importForm(input, file.name, digest));
       }
     }
     for (const file of inputs.filter(f => /\.(step|stp)$/i.test(f.name) && !used.has(f))) assets.push(await this.step(file, options, progress));

@@ -13,7 +13,7 @@ export class SceneRepository {
     if(error)throw new Error(error.message);return data;
   }
   async saveMetadata(assets: Asset[]) {
-    if (assets.some(asset => asset.source.kind === 'generated' && asset.source.generator !== 'forma-industries')) throw new Error('Unsupported generated asset provenance.');
+    if (assets.some(asset => asset.source.kind === 'generated' && asset.source.generator !== 'form-industries')) throw new Error('Unsupported generated asset provenance.');
     const rows=[...new Map(assets.map(asset=>[asset.id,{owner_id:this.owner,asset_key:asset.id,name:asset.name,source_kind:asset.source.kind,metadata:scrubCloudData({dimensions:asset.dimensions,source:asset.source})}])).values()];
     if(!rows.length)return;
     const {error}=await this.client.from('assets').upsert(rows,{onConflict:'owner_id,asset_key'});if(error)throw new Error(error.message);

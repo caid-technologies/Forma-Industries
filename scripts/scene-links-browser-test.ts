@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
 import { chromium, expect, type BrowserContext } from '@playwright/test';
 import { sceneLinkDB } from './lib/scene-link-db.ts';
-import { importForma } from '../src/lib/forma.ts';
+import { importForm } from '../src/lib/form.ts';
 import { appendAssets, emptyWorkspace, makeManifest, writeKeyframe } from '../src/lib/workspace.ts';
 import { sceneAssetHandler } from '../supabase/functions/scene-asset/handler.mjs';
 import { mkdir } from 'node:fs/promises';
@@ -21,7 +21,7 @@ if(!base){
 base=base.replace(/\/$/,'');
 const {db,asUser,rpc}=await sceneLinkDB();
 const owner=randomUUID(),other=randomUUID(),id=randomUUID(),version=randomUUID(),assetRow=randomUUID();
-const asset=importForma({hardware_ir_version:'0.2',overview:{title:'Animated fixture'},mechanical:{render_dimensions:{x_mm:400,y_mm:500,z_mm:600}}},'fixture.json','fixture-digest');
+const asset=importForm({hardware_ir_version:'0.2',overview:{title:'Animated fixture'},mechanical:{render_dimensions:{x_mm:400,y_mm:500,z_mm:600}}},'fixture.json','fixture-digest');
 const bundle=JSON.stringify({schemaVersion:1,asset});
 const file={name:'asset.json',size:Buffer.byteLength(bundle),sha256:createHash('sha256').update(bundle).digest('hex'),mime:'application/json'};
 let ws=appendAssets(emptyWorkspace(),[asset],version);
@@ -64,7 +64,7 @@ async function context(userId:string|null=null):Promise<BrowserContext>{
 async function snapshot(page:any){return page.evaluate(async()=>{const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('astra-scenes',1);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});const rows=await new Promise((resolve,reject)=>{const tx=db.transaction(['scenes','assets'],'readonly');const scenes=tx.objectStore('scenes').getAll(),assets=tx.objectStore('assets').getAll();tx.oncomplete=()=>resolve({scenes:scenes.result,assets:assets.result});tx.onerror=()=>reject(tx.error);});db.close();return rows;});}
 try{
   await db.query('insert into auth.users values($1),($2)',[owner,other]);
-  await db.query("insert into public.assets(id,owner_id,asset_key,name,source_kind) values($1,$2,$3,'Fixture','forma')",[assetRow,owner,asset.id]);
+  await db.query("insert into public.assets(id,owner_id,asset_key,name,source_kind) values($1,$2,$3,'Fixture','form')",[assetRow,owner,asset.id]);
   await db.query("insert into public.asset_file_versions(id,owner_id,asset_id,fingerprint,state,files) values($1,$2,$3,'fixture','ready',$4)",[version,owner,assetRow,JSON.stringify([file])]);
   const saved=await asUser(owner,()=>rpc('save_workspace_scene',[id,'Linked animation',makeManifest(ws),0,randomUUID()]));
   const share=await asUser(owner,()=>rpc('create_scene_share',[id,1]));

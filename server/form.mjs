@@ -4,20 +4,20 @@ import { mkdtemp, readFile, rm, mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { promisify } from 'node:util';
 
-export const FORMA_VERSION = '0.3.5';
+export const FORM_VERSION = '0.3.5';
 const exec = promisify(execFile);
 export function pythonExecutable(root) {
   const local = join(root, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
-  return process.env.FORMA_PYTHON || (existsSync(local) ? local : 'python');
+  return process.env.FORM_PYTHON || process.env.FORMA_PYTHON || (existsSync(local) ? local : 'python');
 }
-export async function formaHealth(root) {
+export async function formHealth(root) {
   try {
     const { stdout } = await exec(pythonExecutable(root), ['-c', 'import importlib.metadata; print(importlib.metadata.version("caid-forma-core"))'], { timeout: 15_000, windowsHide: true });
     const version = stdout.trim();
-    return { available: version === FORMA_VERSION, version, expectedVersion: FORMA_VERSION,
-      message: version === FORMA_VERSION ? 'Forma is ready' : `Install caid-forma-core==${FORMA_VERSION}; found ${version}.` };
+    return { available: version === FORM_VERSION, version, expectedVersion: FORM_VERSION,
+      message: version === FORM_VERSION ? 'Form is ready' : `Install caid-forma-core==${FORM_VERSION}; found ${version}.` };
   } catch {
-    return { available: false, expectedVersion: FORMA_VERSION, message: 'Install the Forma requirements in .venv to enable generation. File imports work independently.' };
+    return { available: false, expectedVersion: FORM_VERSION, message: 'Install the Form requirements in .venv to enable generation. File imports work independently.' };
   }
 }
 
@@ -52,14 +52,14 @@ export function projectForClient(ir) {
 export async function runGeneration(root, request, job) {
   let directory;
   try {
-    const health = await formaHealth(root);
+    const health = await formHealth(root);
     if (!health.available) throw new Error(health.message);
     const parent = resolve(root, '.astra', 'jobs');
     await mkdir(parent, { recursive: true });
     directory = await mkdtemp(join(parent, 'generation-'));
     const output = join(directory, 'project.json');
     const args = generationArgs(request, output);
-    job.message = request.mode === 'simulation' ? 'Running Forma deterministic simulation…' : 'Forma is building your project…';
+    job.message = request.mode === 'simulation' ? 'Running Form deterministic simulation…' : 'Form is building your project…';
     await new Promise((resolveJob, reject) => {
       const child = spawn(pythonExecutable(root), args, { cwd: directory, windowsHide: true, shell: false,
         env: { ...process.env, PYTHONUNBUFFERED: '1', FORMA_DEV_MODE: 'true' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -68,13 +68,13 @@ export async function runGeneration(root, request, job) {
       const timer = setTimeout(() => {
         if (process.platform === 'win32' && child.pid) execFile('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true }, () => {});
         else child.kill('SIGKILL');
-        reject(new Error('Forma generation timed out after 10 minutes. Try a smaller request.'));
+        reject(new Error('Form generation timed out after 10 minutes. Try a smaller request.'));
       }, 600_000);
-      child.on('error', () => { clearTimeout(timer); reject(new Error('Could not start Forma. Check FORMA_PYTHON and the documented setup.')); });
+      child.on('error', () => { clearTimeout(timer); reject(new Error('Could not start Form. Check FORM_PYTHON (or legacy FORMA_PYTHON) and the documented setup.')); });
       child.on('close', code => {
         clearTimeout(timer);
         if (code === 0) resolveJob();
-        else reject(new Error('Forma generation failed. Verify your provider, model, and server-side credentials, then retry.'));
+        else reject(new Error('Form generation failed. Verify your provider, model, and server-side credentials, then retry.'));
       });
     });
     const ir = JSON.parse(await readFile(output, 'utf8'));

@@ -6,7 +6,7 @@ insert into auth.users(id) values
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'a5100000-0000-4000-8000-000000000001', true);
-insert into public.assets(asset_key, name, source_kind) values ('test-fixture', 'Ownership test', 'forma');
+insert into public.assets(asset_key, name, source_kind) values ('test-fixture', 'Ownership test', 'form');
 insert into public.scenes(name, document) values ('Ownership test', '{"room":[6,5,3],"instances":[]}');
 do $$ begin
   if (select count(*) from public.assets) <> 1 or (select count(*) from public.scenes) <> 1 then

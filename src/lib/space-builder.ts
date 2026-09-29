@@ -42,10 +42,10 @@ function envelopeAsset(key: SpaceBriefKey, index: number, spec: EnvelopeSpec): A
   const asset = finalizeAsset({
     id: `space-${key}-${index}`,
     name: spec.name,
-    source: { kind: 'forma', filename: `forma-${key}-equipment-brief.json`, digest: `planning-${key}-${index}` },
-    parts: [{ id: `space-${key}-${index}/envelope`, name: spec.name, vertices: Array.from(geometry.attributes.position.array), indices: Array.from(geometry.index!.array), color: spec.color, metadata: { representation: 'Forma equipment planning envelope', zone: spec.zone, status: 'Replace with Forma-authored equipment artifact' } }],
+    source: { kind: 'form', filename: `form-${key}-equipment-brief.json`, digest: `planning-${key}-${index}` },
+    parts: [{ id: `space-${key}-${index}/envelope`, name: spec.name, vertices: Array.from(geometry.attributes.position.array), indices: Array.from(geometry.index!.array), color: spec.color, metadata: { representation: 'Form equipment planning envelope', zone: spec.zone, status: 'Replace with Form-authored equipment artifact' } }],
     hierarchy: { id: `space-${key}-${index}/root`, name: spec.name, partIds: [`space-${key}-${index}/envelope`], children: [] },
-    warnings: ['Planning envelope only. Author and replace this equipment with Forma OSS before fabrication.'],
+    warnings: ['Planning envelope only. Author and replace this equipment with Form OSS before fabrication.'],
   });
   geometry.dispose();
   return asset;

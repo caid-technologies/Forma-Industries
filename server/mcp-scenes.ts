@@ -35,7 +35,7 @@ function description(asset: Asset, ref: AssetRef) {
     parts: asset.parts.map(part => ({ id: part.id, name: part.name, representation: part.metadata.representation ?? 'Imported geometry' })), warnings: asset.warnings,
     provenance: { filename: asset.source.filename, digest: asset.source.digest,
       ...(asset.source.projectId ? { project_id: asset.source.projectId } : {}),
-      ...(asset.formaProject?.revision ? { project_revision: asset.formaProject.revision } : {}),
+      ...(asset.formProject?.revision ? { project_revision: asset.formProject.revision } : {}),
       ...(asset.source.kind === 'generated' ? { generator: asset.source.generator } : {}) } };
 }
 function animation(draft: Draft): Animation {
@@ -82,7 +82,7 @@ export async function executeSceneTool(name: string, raw: unknown, ctx: SceneCon
     if (geometryBytes > limits.totalGeometry) return fail('PAYLOAD_TOO_LARGE', 'Referenced geometry exceeds 50 MiB.');
     let asset: Asset;
     try { asset = parseCloudBundle(text).asset; }
-    catch { return fail('INVALID_ASSET', 'Asset geometry is not a valid renderable Astra bundle.'); }
+    catch { return fail('INVALID_ASSET', 'Asset geometry is not a valid renderable Mergence bundle.'); }
     if (version && (asset.id !== version.asset?.asset_key || asset.source.kind !== version.asset?.source_kind)) return fail('INVALID_ASSET', 'Geometry does not match its immutable asset identity.');
     const value = { asset, version: version?.id }; loaded.set(key, value); return value;
   }
