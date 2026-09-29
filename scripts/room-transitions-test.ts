@@ -248,7 +248,9 @@ try {
   console.log('PASS stale scene import, generation, save, list and account results');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Sign in with GitHub', exact: true })).toBeVisible();
+  await expect(manager).toContainText('Sign in to save scenes');
   await expect(width).toBeEnabled();
+  await saved();
   await page.getByLabel('Import files').setInputFiles({ name: 'local.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(source)) });
   await expect(page.locator('.asset')).toHaveCount(1);
   await width.fill('17');

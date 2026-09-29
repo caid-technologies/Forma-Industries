@@ -37,7 +37,7 @@ function App(){
   const [time,setTime]=useState<number|null>(null);const[playing,setPlaying]=useState(false);
   const [currentScene,setCurrentScene]=useState<SavedScene|null>(null);
   const [roomId,setRoomId]=useState('local');
-  const [status,setStatus]=useState('Ready to import');const[error,setError]=useState('');const[busy,setBusy]=useState(true);
+  const [status,setStatus]=useState('Ready to import');const[error,setError]=useState('');const[busyState,setBusy]=useState(true);
   const [prompt,setPrompt]=useState('A small 5V laboratory temperature monitor with a display');const[mode,setMode]=useState('simulation');
   const [model,setModel]=useState('');const[provider,setProvider]=useState('openai');
   const [spaceKey,setSpaceKey]=useState<SpaceBriefKey>('maker');const[spaceRequirements,setSpaceRequirements]=useState(SPACE_BRIEFS.maker.description);
@@ -62,6 +62,7 @@ function App(){
   const mainOperation=useRef(0);
   const getScope=()=>`${session.current.owner??'guest'}:${session.current.roomId}:${roomOperation.current}`;
   const[draftReady,setDraftReady]=useState(false);const draftOwner=useRef<string|null>(null);const draftEpoch=useRef(0);const[localSaved,setLocalSaved]=useState(false);
+  const busy=busyState||(!linkMode&&(!draftReady||previousOwner.current!==owner));
   const [adoptionPending,setAdoptionPending]=useState(false);
   const [draftRecovery,setDraftRecovery]=useState<{scope:string;message:string}|null>(null);
   const [samplingPlan,setSamplingPlan]=useState<SamplingRoomPlan[]>([]);
