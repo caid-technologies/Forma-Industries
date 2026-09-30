@@ -23,6 +23,7 @@ jobs:
       - run: npm run test:cad
       - run: node --import tsx scripts/workspace-test.ts
       - run: npm run test:animation
+      - run: npm run test:layout
       - run: npm run test:scene-links
       - run: npx playwright install --with-deps chromium
       - run: npm run test:form-workflows-browser
@@ -42,6 +43,15 @@ jobs:
         with:
           name: animation-browser-evidence
           path: ${{ runner.temp }}/animation-evidence
+          if-no-files-found: ignore
+      - run: npm run test:layout-browser
+        env:
+          LAYOUT_EVIDENCE_DIR: ${{ runner.temp }}/layout-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layout-browser-evidence
+          path: ${{ runner.temp }}/layout-evidence
           if-no-files-found: ignore
       - run: npm run test:room-transitions
         env:
