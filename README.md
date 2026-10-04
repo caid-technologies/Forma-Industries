@@ -39,6 +39,15 @@ You can import, edit, animate, and export locally without signing in. Optional c
 
 ## How Form and Mergence work together
 
+### Generate and transfer projects in OpenIndustries
+
+- **Generate Forma project → Build with Form** checks the local Forma installation before enabling generation. Choose **Deterministic demo** for a sample without credentials, or **Live generation** with your server-configured provider and model. The resulting equipment is added to the current room, with its design, BOM, and validation data retained.
+- **Export selected Forma project** downloads the selected equipment as `.forma.json`, using the same Hardware IR shape as Forma's JSON export. Referenced STEP/CAD files remain separate; room placement and animation belong to the OI project.
+- **Export OI project** downloads a portable `.oi.json` containing the room, available equipment geometry, instance names/transforms/visibility, retained Forma design data, and animation. **Import OI project** opens it on a fresh browser without an account. Unsaved room changes are protected by the existing save/discard/cancel prompt.
+- Existing `mergence-scene.json` and `astra.scene` v1 files still open. The **Export scene JSON** action uses the same portable OI export. Missing geometry remains marked missing; exporting cannot restore unavailable source files.
+
+**Hosted generation:** the current Vercel build serves only the browser app; it does not run the Node/Python generator. It supports both project file workflows. Generation controls explain how to use the local workbench instead of silently disappearing. See [local generation setup](docs/development.md#local-form-generation).
+
 **Form authors the equipment; Mergence places and reviews it in a space.** Form OSS provides hardware generation, validation, and compiled project data. Mergence imports that output and adds room layout, instance placement, animation, and visual review.
 
 1. **Create or bring equipment.** Author and compile a project in Form, or use an existing STEP file from another CAD tool.
@@ -99,7 +108,7 @@ Copy [`.env.example`](.env.example) to `.env` when you need configuration. Resta
 | Live Form generation | Configure server-side provider credentials in `.env` and select a provider/model in the UI. Live provider calls have not yet been verified in this project. |
 | GitHub sign-in and cloud scenes | Configure Supabase Auth/Postgres and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. See [Auth/database setup](supabase/README.md). |
 | Private cloud geometry and GIFs | Apply the storage migrations and set `VITE_CLOUD_STORAGE_ENABLED=true`. See the [storage guide](docs/cloud-storage.md). |
-| Hide local generation controls | Set `VITE_FORM_GENERATION_ENABLED=false` if you generate equipment separately and only need to import it. |
+| Disable local generation | Set `VITE_FORM_GENERATION_ENABLED=false` for browser-only deployments. The generation panel explains local setup; import/export stays available. |
 | Local agents and CLI | See [OpenCode/MCP setup](docs/development.md#optional-form-mcp-demo), [scene authoring through MCP](docs/mcp-scenes.md), and the [Mergence CLI](docs/development.md#astra-cli). |
 
 Only public Supabase browser configuration belongs in `VITE_` variables. Provider credentials and Supabase service-role keys must stay out of the browser bundle.
