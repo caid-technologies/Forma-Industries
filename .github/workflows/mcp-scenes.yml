@@ -66,3 +66,11 @@ jobs:
       - run: npm run test:mcp-scenes-browser
       - run: npm run test:scene-history-browser
       - run: npm run test:mcp-agent-workflows-browser
+        env:
+          MCP_WORKFLOW_EVIDENCE_DIR: ${{ runner.temp }}/mcp-workflow-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcp-workflow-browser-evidence
+          path: ${{ runner.temp }}/mcp-workflow-evidence
+          if-no-files-found: ignore
