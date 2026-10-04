@@ -23,7 +23,7 @@ npx playwright install chromium
 npm run test:mcp-agent-workflows-browser
 ```
 
-CI installs Chromium system dependencies too. `ASTRA_CHROME_PATH` selects a locally installed Chromium executable. Screenshots are written to `test-results/mcp-<client>-pinned.png`. Tests check create/update/read, schema discovery, owner isolation, conflicts, sanitized responses, and the returned URLs; merely visiting `/?scene=cleanroom` is not this test.
+CI installs Chromium system dependencies too. `ASTRA_CHROME_PATH` selects a locally installed Chromium executable. Screenshots are written to `test-results/mcp-<client>-<stage>.png` for the original, updated, pinned, comparison, and restored views. Set `MCP_WORKFLOW_EVIDENCE_DIR` to choose another output directory; CI uploads these as `mcp-workflow-browser-evidence`. Tests check create/update/read, schema discovery, owner isolation, conflicts, sanitized responses, returned URLs, and browser comparison/restore of the same MCP-authored scene. Restore must append a new head with the original geometry, placements and animation, preserve all earlier snapshots, and leave the original revision URL unchanged. Merely visiting `/?scene=cleanroom` is not this test.
 
 ## 2. Configure persistent scene authoring
 
@@ -140,6 +140,8 @@ npm run demo:mcp-scene -- --client chatgpt --update SCENE_UUID --base-revision 1
 The runner reads pinned revision 1, preserves its immutable cloud asset references and route, changes room width to 27 m, moves Desk 2 to X 3.248 m, and submits `update_scene` with base revision 1. It returns revision 2. Open that URL to see the edit, then reopen the original revision-1 URL: the width remains 24.384 m and the original layout/route remains intact. The head URL shows the latest revision when opened.
 
 The agent equivalent is to call `read_scene`, edit the returned `scene`, then call `update_scene` with its `scene_id`, explicit `base_revision`, a fresh `request_id`, and the new descriptive `agent`. Agent labels do not change ownership; the authenticated CLI account must own the scene.
+
+Open **Revision history**, select revisions 1 and 2, and click **Compare revisions** to inspect the room-width and desk-position changes. Click **Restore revision 1** and confirm: the workbench appends a new head revision containing revision 1's layout and animation. Existing revisions stay intact. Reopen the original revision-1 URL to verify that it still identifies the same saved snapshot. If another client advances the head first, refresh history and review the change before retrying a restore.
 
 For a committed-write retry, pass `--request-id THE_SAME_UUID` and exactly the same client, scene, and base revision. The runner prints the request ID before sending. A stale base returns `CONFLICT` with the current revision; read/compare that revision before deliberately updating your base. The runner never silently retries against a newer head. See [error recovery](mcp-scenes.md#persistence-recovery-and-limits). Test scenes can be deleted explicitly in the workbench; unreferenced uploads remain available for deliberate cleanup.
 
