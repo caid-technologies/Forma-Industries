@@ -83,6 +83,8 @@ try {
   await page.getByRole('button', { name: 'Generate Forma project', exact: true }).click();
   await page.locator('#workspace-panel').evaluate(el => { el.scrollTop = 0; });
   await page.screenshot({ path: join(output, 'oi-project-desktop.png') });
+  // Exports are on disk; stop the source WebGL loop before booting another renderer.
+  await context.close();
 
   // A clean browser context proves the export does not rely on the original cache/login.
   const fresh = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
@@ -129,7 +131,7 @@ try {
   await reopened.getByRole('button', { name: 'Export selected Forma project', exact: true }).scrollIntoViewIfNeeded();
   await reopened.screenshot({ path: join(output, 'oi-project-mobile.png') });
   assert.deepEqual(errors, []);
-  await fresh.close(); await context.close();
+  await fresh.close();
   console.log(`PASS ${realGeneration ? 'real local Forma' : 'fixture'} generation → Forma JSON → OI export → fresh-browser import, layout/animation/BOM retention, failures, desktop/mobile.`);
 } finally {
   await browser?.close(); await web.close();

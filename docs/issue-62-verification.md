@@ -38,6 +38,7 @@ All passed with Chromium 153 selected through `ASTRA_CHROME_PATH`:
 
 ```sh
 npm run build
+npm run test:project-files-browser
 npm run test:mcp-scenes-browser
 npm run test:scene-history-browser
 npm run test:scene-links-browser
