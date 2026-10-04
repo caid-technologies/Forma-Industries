@@ -1,11 +1,11 @@
 import type { SceneItem } from '../lib/workspace';
 export type LayoutMode = 'orbit' | 'translate' | 'rotate';
-export function LayoutTools({ mode, setMode, grid, setGrid, floor, setFloor, item, disabled, snapFloor, previewing }: {
-  mode: LayoutMode; setMode: (mode: LayoutMode) => void; grid: number; setGrid: (grid: number) => void;
+export function LayoutTools({ mode, setMode, grid, setGrid, floor, setFloor, item, disabled, snapFloor, previewing, hidden }: {
+  hidden: boolean; mode: LayoutMode; setMode: (mode: LayoutMode) => void; grid: number; setGrid: (grid: number) => void;
   floor: boolean; setFloor: (floor: boolean) => void; item?: SceneItem; disabled: boolean; snapFloor: () => void; previewing: boolean;
 }) {
   const unavailable = disabled || !item || item.missing || !item.visible;
-  return <div className="layout-tools" role="region" aria-label="Layout tools">
+  return <div id="layout-tools" className="layout-tools" hidden={hidden} role="region" aria-label="Layout tools">
     <div className="layout-modes" role="group" aria-label="Viewport interaction">
       {(['orbit','translate','rotate'] as const).map(value => <button key={value} aria-pressed={mode === value}
         disabled={disabled || (value !== 'orbit' && unavailable)} onClick={() => setMode(value)}>
