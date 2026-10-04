@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+.project-files button{font-size:11px}.project-file-note{display:block;margin-top:8px;line-height:1.6}#forma-generation a{color:#c8ef82}#forma-generation form>button{margin-top:12px}
 .placement{border:1px solid #304036;border-radius:6px;padding:8px 10px 10px;margin:10px 0}.placement legend{font-size:11px;color:#d5e4d3;padding:0 4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.placement button{font-size:11px;padding:7px 9px}
 .part-select{padding:0;border:0;background:transparent;text-align:left;width:100%;font-size:12px}.part-select:hover{background:transparent;color:#c8ef82}
 .project-meta{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:11px}.project-meta dt{color:#8fa38f}.project-meta dd{margin:0;overflow-wrap:anywhere;color:#dfe7df}pre{max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#17211d;border:1px solid #2f4035;border-radius:4px;padding:9px;font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:#bcd3bd}

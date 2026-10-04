@@ -22,7 +22,9 @@ python3 -m venv .venv
 
 Form is installed through `caid-forma-core==0.3.5`; no Form source checkout is required for this bridge. The distribution provides the `forma-oss` and `forma-core` commands. Mergence invokes `python -m forma_core` from this environment. Set `FORM_PYTHON` in `.env` if you need a different Python executable.
 
-Start `npm run dev`, open <http://127.0.0.1:5173>, and use **Build with Form → Deterministic demo → Build and import** to verify creation and import without provider credentials. Keep `VITE_FORM_GENERATION_ENABLED=true` for these controls.
+Start `npm run dev`, open <http://127.0.0.1:5173>, and use **Generate Forma project → Build with Form → Deterministic demo → Build and import** to verify creation and import without provider credentials. Keep `VITE_FORM_GENERATION_ENABLED=true`. The panel checks `/api/health`; if Python/Form is missing, install it and click **Check again**.
+
+After generation, **Export selected Forma project** downloads the original equipment design as Hardware IR JSON, including the BOM and validation. **Export OI project** bundles the full room, equipment geometry, placements, and animation into `.oi.json`; reopen it with **Import OI project**. Layout transforms do not modify the Forma design. External CAD references are not downloaded by the Forma JSON exporter.
 
 For live generation, configure the appropriate provider environment variables in `.env` (see [`.env.example`](../.env.example)) and enter the provider/model in the UI. Provider credentials stay in the server-side Form process. Live provider calls have not yet been verified in this project.
 
@@ -113,6 +115,8 @@ Open `/?scene=cleanroom` to load the bundled cleanroom POC example from `public/
 
 ## Verification
 
+Run `npm run test:project-files` for Forma/OI round trips and generation error handling, and `npm run test:project-files-browser` for browser generation/import/export, a fresh-browser reopen, failure recovery, and desktop/mobile layouts. CI uses deterministic API fixtures and uploads the browser evidence. To exercise the installed Python Forma package instead, set `OI_REAL_GENERATION=true` before running the browser test; it starts its own local API on port 8799 and uses deterministic simulation, without provider credentials. `OI_PROJECT_EVIDENCE_DIR` optionally retains its screenshots and exported files. Live paid-provider generation remains unverified.
+
 After `npm run build`, with `npm start` running, run `npm test`. The Chrome smoke test checks Form import, actual STEP conversion using an upstream cube fixture, room controls, invalid JSON recovery, and pip-installed Form deterministic generation. Screenshots are written to `test-results/`. Chrome and network access for the STEP fixture are required.
 
 ## GIF studio and asset library
@@ -152,7 +156,7 @@ Production/preview environment variables:
 
 - `VITE_SUPABASE_URL`: the Supabase project URL.
 - `VITE_SUPABASE_PUBLISHABLE_KEY`: the public browser key (never a service-role/secret key).
-- `VITE_FORM_GENERATION_ENABLED=false`: hides local-only Form generation controls; generate projects with Form separately, then import them into Mergence.
+- `VITE_FORM_GENERATION_ENABLED=false`: disables local generation and shows setup guidance without making API calls; generate locally, then import the Forma or OI project into the hosted app.
 
 The deployment serves rendering, imports, GIF exports, local asset library, and GitHub Auth. The Node/Python generation server is not deployed. `.vercelignore` excludes environment files, virtual environments, local databases/caches, server code, Supabase config, and test screenshots.
 

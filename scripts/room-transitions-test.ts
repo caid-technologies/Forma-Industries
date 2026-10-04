@@ -213,12 +213,16 @@ try {
   await expect(page.locator('.asset')).toHaveCount(0); await expect(prompt).not.toBeVisible();
 
   const generationEntered = deferred(), generationRelease = deferred(), generationDelivered = deferred();
+  // Generation is mocked in this suite; its availability check must stay local too.
+  await page.route('**/api/health', route => json(route, { available: true, message: 'Fixture generator ready' }));
   await page.route('**/api/generations', route => json(route, { id: 'delayed-generation' }));
   await page.route('**/api/generations/delayed-generation', async route => {
     generationEntered.resolve(); await generationRelease.promise;
     await json(route, { status: 'succeeded', project: source, message: 'Old account generation' }); generationDelivered.resolve();
   });
   await page.getByText('Build with Form', { exact: true }).click();
+  await expect(page.getByRole('status', { name: 'Forma availability' })).toHaveText('Fixture generator ready');
+  await expect(page.getByRole('button', { name: 'Build and import →', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Build and import →', exact: true }).click(); await generationEntered.promise;
   await page.evaluate(async session => { const { supabase } = await import('/src/lib/supabase.ts'); await supabase!.auth.setSession(session); }, otherSession);
   await expect(width).toBeEnabled(); generationRelease.resolve(); await generationDelivered.promise;

@@ -20,11 +20,21 @@ jobs:
       - run: npm run test:mcp
       - run: npm run test:form-import
       - run: npm run test:form-workflows
+      - run: npm run test:project-files
       - run: npm run test:cad
       - run: node --import tsx scripts/workspace-test.ts
       - run: npm run test:animation
       - run: npm run test:scene-links
       - run: npx playwright install --with-deps chromium
+      - run: npm run test:project-files-browser
+        env:
+          OI_PROJECT_EVIDENCE_DIR: ${{ runner.temp }}/oi-project-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oi-project-browser-evidence
+          path: ${{ runner.temp }}/oi-project-evidence
+          if-no-files-found: ignore
       - run: npm run test:form-workflows-browser
         env:
           FORM_IMPORT_EVIDENCE_DIR: ${{ runner.temp }}/form-import-evidence

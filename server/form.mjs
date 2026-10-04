@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { promisify } from 'node:util';
+import { scrubPortableData } from '../src/lib/portable-data.mjs';
 
 export const FORM_VERSION = '0.3.5';
 const exec = promisify(execFile);
@@ -28,7 +29,7 @@ export function generationArgs(body, output) {
   if (body.mode === 'simulation') args.push('--simulation');
   else {
     for (const key of ['provider', 'model']) {
-      if (typeof body[key] !== 'string' || !body[key].trim() || body[key].length > 160 || body[key].startsWith('-')) throw new Error(`Enter a valid ${key} for live generation.`);
+      if (typeof body[key] !== 'string' || !body[key].trim() || body[key].length > 160 || body[key].trim().startsWith('-')) throw new Error(`Enter a valid ${key} for live generation.`);
       args.push(`--${key}`, body[key].trim());
     }
     if (body.provider.trim().toLowerCase() === 'simulation') throw new Error('Use simulation mode for the simulation provider.');
@@ -38,13 +39,7 @@ export function generationArgs(body, output) {
 
 // Expose only the fields needed by the importer. Provider settings and generation logs stay server-side.
 export function projectForClient(ir) {
-  const scrub = value => {
-    if (Array.isArray(value)) return value.map(scrub);
-    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value)
-      .filter(([key]) => !/(api.?key|token|secret|password|credential|authorization)/i.test(key)).map(([key, item]) => [key, scrub(item)]));
-    return value;
-  };
-  return scrub({ project_ir: ir, agent: ir.agent, hardware_ir_version: ir.hardware_ir_version, overview: ir.overview, mechanical: ir.mechanical,
+  return scrubPortableData({ project_ir: ir, agent: ir.agent, hardware_ir_version: ir.hardware_ir_version, overview: ir.overview, mechanical: ir.mechanical,
     cad_model: ir.cad_model, part_definitions: ir.part_definitions, components: ir.components,
     assembly_metadata: { project_id: ir.assembly_metadata?.project_id } });
 }
