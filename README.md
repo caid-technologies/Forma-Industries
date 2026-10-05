@@ -1,4 +1,4 @@
-# Mergence
+# Open Industrials
 
 **Arrange hardware in a 3D space, animate how it moves, and share the layout for review.**
 
