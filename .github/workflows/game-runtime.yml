@@ -27,7 +27,7 @@ jobs:
     env:
       OI_GAME_PG_BIN: /usr/lib/postgresql/16/bin
       OI_GAME_PGDATA: /tmp/oi-game-pg
-      OI_GAME_TEST_DATABASE_URL: postgresql://postgres@127.0.0.1:54328/oi_game_test
+      OI_GAME_TEST_DATABASE_URL: postgresql://postgres@127.0.0.1:54328/oi_game_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
