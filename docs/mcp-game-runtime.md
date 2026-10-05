@@ -110,4 +110,6 @@ Only the public `game_runtime` invoker RPC can reach the private, narrowly grant
 
 The auth facade does not establish evidence of a hosted Supabase login or production deployment. A deployment smoke test must still verify two real accounts, configured migrations, cron health and reconnect in the target environment. Existing build, room MCP, scene MCP, scene history and cross-agent workflow checks remain required; the existing browser CI also runs on the PR.
 
+The Tower Defense PR #9 discovery client was also run against this checkout using MCP SDK 1.32.0. It successfully enumerated all 18 tools, including the five game tools. Its startup gate correctly remained closed with `GAME_CONTRACT_UNVERIFIED`: discovery is compatible, but a game-side adapter and the remaining runtime capabilities still need verification.
+
 References: [Supabase function privileges](https://supabase.com/docs/guides/database/functions), [Cron setup and second schedules](https://supabase.com/docs/guides/cron/quickstart), [Postgres locking](https://www.postgresql.org/docs/current/explicit-locking.html).

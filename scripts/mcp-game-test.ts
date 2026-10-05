@@ -65,6 +65,8 @@ try {
   let a = await connect(alice), b = await connect(bob); const other = await connect(outsider);
   const tools = (await a.rpc('tools/list')).tools; const ajv = new Ajv({ strict: false });
   for (const tool of tools.filter((t: any) => t.name.startsWith('astra.game_'))) {
+    // MCP requires an object root even when JSON Schema's oneOf supplies fields.
+    assert.equal(tool.inputSchema.type, 'object'); assert.equal(tool.outputSchema.type, 'object');
     validators.set(tool.name.replace('astra.game_', ''), ajv.compile(tool.outputSchema));
   }
   assert.equal(validators.size, 5);

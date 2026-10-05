@@ -59,7 +59,7 @@ export const gameTools = [
   { name: 'astra.game_read_match', description: 'Read a full participant-scoped reconnect snapshot, catching durable jobs up to database time. Replace local state; do not infer opponent inventory from shared revisions.',
     inputSchema: object({ version, match_id: uuid }), outputSchema: object(snapshotResult) },
   { name: 'astra.game_command', description: 'Issue a version-checked authoritative command. Inspect before collection, then process the owned batch. Recipe, time, power and yields are server-owned. Read after CONFLICT and submit a new command ID; retry uncertain outcomes with the identical ID and payload.',
-    inputSchema: { oneOf: Object.entries(actions).map(([action, fields]) => object({ ...common, action: { const: action }, ...fields })) },
+    inputSchema: { type: 'object', oneOf: Object.entries(actions).map(([action, fields]) => object({ ...common, action: { const: action }, ...fields })) },
     outputSchema: commandResult },
 ];
 export class GameToolError extends Error {
